@@ -1,0 +1,21 @@
+# created by the installer on each PC
+# (leading / = only the top-level folder; the engine has its own code folders named "models")
+/runtime/
+/runtime_python/
+/models/
+/installer/tools/
+/installer/.uv-cache/
+/installer/*.exe
+/Stereo3DStudio.exe
+/install_log.txt
+
+# Python
+__pycache__/
+*.py[cod]
+
+# OS / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/

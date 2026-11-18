@@ -1,0 +1,38 @@
+# install from https://pytorch.org/get-started/locally/
+# torch
+# torchvision
+# torchtext
+# numpy < 2.0.0
+# pillow
+requests
+tqdm
+scipy
+waitress
+bottle==0.12.25
+diskcache
+psutil
+pyyaml
+platformdirs
+# opencv-python
+packaging
+filelock
+
+# iw3
+timm
+av==19.0.1
+simpleeval
+
+# iw3-player
+fastapi
+hypercorn
+pysubs2
+pyopenssl==25.3.0
+
+# depthpro da3
+pillow_heif
+# da3
+safetensors
+einops
+# da3
+omegaconf
+addict

@@ -1,0 +1,5 @@
+APP_NAME = "Stereo3D Studio"
+VERSION = "1.0"
+AUTHOR = "Drew Medina"
+WEBSITE = "https://drewmedina.com"
+ENGINE_CREDIT = "3D engine: iw3 / nunif by nagadomi (MIT License) — github.com/nagadomi/nunif"
