@@ -17,7 +17,7 @@ Stereo3D Studio is a desktop app built on [iw3](https://github.com/nagadomi/nuni
 2D-to-stereo engine. It estimates depth with modern AI depth models, builds a second eye for every frame, and encodes
 the result as side-by-side (SBS) 3D video — with a queue, presets, live preview and a one-click Windows installer.
 
-## Sample: 2D → 3D
+## Samples: 2D → 3D
 
 <p align="center">
   <a href="https://github.com/drewmedina55-ux/Stereo3DStudio/raw/main/docs/sample/elephants_Any_V2_L_HSBS.mp4">
@@ -31,6 +31,18 @@ A 4K stock clip converted to Half SBS 3D with Depth Anything V2 Large (Odyssey 3
 free-view the preview above (parallel).
 
 Source footage: [Footage of Elephants Eating Together](https://www.pexels.com/video/footage-of-elephants-eating-together-3842822/) on Pexels.
+
+<p align="center">
+  <a href="https://github.com/drewmedina55-ux/Stereo3DStudio/raw/main/docs/sample/candles_Any_V2_L_HSBS.mp4">
+    <img src="docs/sample/candles_preview.gif" width="800" alt="Women holding lit candles converted to Half SBS 3D with Stereo3D Studio">
+  </a>
+</p>
+
+A stock clip converted to Half SBS 3D with Depth Anything V2 Large.
+**[⬇ Download the 3D video](https://github.com/drewmedina55-ux/Stereo3DStudio/raw/main/docs/sample/candles_Any_V2_L_HSBS.mp4)**
+(MP4, HEVC, 1920×1080 Half SBS, 12 s, 6.6 MB).
+
+Source footage: [Women Holding Lighted Candles](https://www.pexels.com/video/women-holding-lighted-candles-8811204/) on Pexels.
 
 ## Features
 
