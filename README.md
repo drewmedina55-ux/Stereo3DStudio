@@ -139,6 +139,12 @@ runtime\Scripts\python.exe -m stereo3dstudio
 `Stereo3DStudio.exe` is a tiny launcher compiled on your PC by the installer from
 [`installer/Launcher.cs`](installer/Launcher.cs) with the C# compiler that ships with Windows.
 
+### Releases
+
+Releases are built automatically. Raise `VERSION` in `app/stereo3dstudio/__init__.py`, add
+`release-notes/v<version>.md`, and push to `main`: the **Build and release** workflow builds the full setup package
+on a Windows runner (including the launcher EXE) and publishes it as release `v<version>`.
+
 ### Project layout
 
 | Path | What it is |

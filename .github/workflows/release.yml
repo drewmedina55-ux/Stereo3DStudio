@@ -1,0 +1,60 @@
+# Robo build: whenever the version in app/stereo3dstudio/__init__.py changes on main, build the full
+# setup package on a Windows runner and publish it as a GitHub release (v<version>).
+name: Build and release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: ver
+        shell: pwsh
+        run: |
+          $m = Select-String -Path app/stereo3dstudio/__init__.py -Pattern '^VERSION = "([^"]+)"'
+          $v = $m.Matches[0].Groups[1].Value
+          "version=$v" >> $env:GITHUB_OUTPUT
+          gh release view "v$v" 2>$null
+          if ($LASTEXITCODE -eq 0) { "exists=true" >> $env:GITHUB_OUTPUT; Write-Host "Release v$v already exists - nothing to do." }
+          else { "exists=false" >> $env:GITHUB_OUTPUT; $global:LASTEXITCODE = 0 }
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Build setup package
+        if: steps.ver.outputs.exists == 'false'
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $name = "Stereo3DStudio_v$v"
+          New-Item -ItemType Directory -Force out | Out-Null
+          git archive --format=zip --prefix="$name/" -o out/src.zip HEAD
+          Expand-Archive out/src.zip -DestinationPath out
+          Remove-Item -Recurse -Force "out/$name/docs", "out/$name/.github", "out/$name/release-notes", "out/$name/.gitattributes", "out/$name/.gitignore" -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force "out/$name/models/iw3/pretrained_models/hub/checkpoints" | Out-Null
+          $csc = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+          & $csc /nologo /target:winexe /optimize+ "/win32icon:out/$name/assets/stereo3dstudio.ico" /r:System.Windows.Forms.dll "/out:out/$name/Stereo3DStudio.exe" "out/$name/installer/Launcher.cs"
+          if (-not (Test-Path "out/$name/Stereo3DStudio.exe")) { throw "Launcher did not compile" }
+          Push-Location out
+          7z a -tzip "$name`_Setup.zip" $name | Out-Null
+          Pop-Location
+          Get-Item "out/$name`_Setup.zip" | Format-List Name, Length
+
+      - name: Publish release
+        if: steps.ver.outputs.exists == 'false'
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $notes = "release-notes/v$v.md"
+          if (-not (Test-Path $notes)) { "Stereo3D Studio $v - see CHANGELOG.md." | Set-Content $notes }
+          gh release create "v$v" "out/Stereo3DStudio_v$v`_Setup.zip" --title "Stereo3D Studio $v" --notes-file $notes --target $env:GITHUB_SHA --latest
+        env:
+          GH_TOKEN: ${{ github.token }}
