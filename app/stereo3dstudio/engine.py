@@ -144,13 +144,13 @@ def build_args(s, input_path, output_dir, preview=False):
     info = _video_info(input_path)
     if info:
         src_w, src_h, sar = info
-        filters = []
-        if abs(sar - 1.0) > 0.01:                       # DVD-style non-square pixels (e.g. 720x480 at 8:9)
-            filters.append("scale='trunc(iw*sar/2)*2':ih:flags=bicubic,setsar=1")
+        # One plain "scale=W:H" with numbers: it works both in FFmpeg and in the GPU-decode (NVDEC) filter path,
+        # which supports only a few filters and no SAR expressions.
         work_h = min(src_h, max_h) if max_h else src_h
-        if max_h and src_h > max_h:
-            filters.append(f"scale=-2:{max_h - max_h % 2}:flags=bicubic")
-        vf = ",".join(filters)
+        work_h -= work_h % 2
+        work_w = round(src_w * sar * work_h / src_h / 2) * 2     # square pixels (DVD 720x480 at 8:9 -> 640x480)
+        if (work_w, work_h) != (src_w, src_h):
+            vf = f"scale={work_w}:{work_h}:flags=bicubic"
         if work_h > 1100:
             batch = max(1, round(batch * (1080 / work_h) ** 2))
         # 4:3 (or any picture narrower than 16:9): add black side bars to each eye so the frame is 16:9
