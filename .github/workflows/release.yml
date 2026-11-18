@@ -41,7 +41,8 @@ jobs:
           Remove-Item -Recurse -Force "out/$name/docs", "out/$name/.github", "out/$name/release-notes", "out/$name/.gitattributes", "out/$name/.gitignore" -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force "out/$name/models/iw3/pretrained_models/hub/checkpoints" | Out-Null
           $csc = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
-          & $csc /nologo /target:winexe /optimize+ "/win32icon:out/$name/assets/stereo3dstudio.ico" /r:System.Windows.Forms.dll "/out:out/$name/Stereo3DStudio.exe" "out/$name/installer/Launcher.cs"
+          $dir = (Resolve-Path "out\$name").Path              # csc needs Windows-style absolute paths
+          & $csc /nologo /target:winexe /optimize+ "/win32icon:$dir\assets\stereo3dstudio.ico" /r:System.Windows.Forms.dll "/out:$dir\Stereo3DStudio.exe" "$dir\installer\Launcher.cs"
           if (-not (Test-Path "out/$name/Stereo3DStudio.exe")) { throw "Launcher did not compile" }
           Push-Location out
           7z a -tzip "$name`_Setup.zip" $name | Out-Null
