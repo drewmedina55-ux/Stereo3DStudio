@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2
+- **4:3 videos now convert correctly** (DVDs, classic cartoons and TV). Each eye gets black side bars so the
+  side-by-side / top-bottom frame is 16:9: 3D displays split the screen in half, and a 4:3 frame that the player
+  shrank to fit put each eye in the wrong place. Video tab: "Fit 4:3 videos to 16:9" (on by default).
+- Non-square-pixel videos (DVD 720×480 / 720×576) are converted to square pixels first, so the picture keeps its
+  real shape instead of looking stretched.
+
 ## 1.0.1
 - New **Processing size** setting (Video tab), default 1080p: 4K videos are scaled down before converting,
   which is several times faster and stays inside GPU memory. Choose 1440p, 4K or Source size for more detail.

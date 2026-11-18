@@ -84,7 +84,8 @@ DEFAULTS = {
     "depth_model": "Any_V2_L",      # best detail; fits 16 GB at default resolution
     "resolution": 0,                # model default (higher multiplies VRAM + time)
     "method": "mlbw_l2_inpaint",    # fills revealed gaps - cleanest edges
-    "max_height": 1080,             # process videos at up to this height (0 = source size)
+    "max_height": 1080,
+    "pad_16x9": True,               # 4:3 videos get side bars so SBS / top-bottom frames are 16:9             # process videos at up to this height (0 = source size)
     "divergence": 2.2,
     "convergence": 0.45,
     "foreground_scale": 0.0,

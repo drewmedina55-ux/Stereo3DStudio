@@ -48,6 +48,8 @@ Source footage: [Footage of Elephants Eating Together](https://www.pexels.com/vi
 - **Frame preview** with side-by-side, anaglyph, wiggle and single-eye views.
 - **Settings travel with the file** — every output video stores the settings used; drop it back into the window to
   restore them. Output names include the depth model.
+- **4:3 and DVD videos** — non-square DVD pixels are corrected and 4:3 pictures get side bars in each eye, so
+  side-by-side 3D lines up on 16:9 3D screens.
 - **Processing size** — 4K videos are converted at 1080p by default (several times faster); pick 1440p, 4K or
   source size in the Video tab when you want the extra detail.
 - Auto-crop letterbox bars, flicker reduction, scene-cut detection, flip TTA, depth anti-aliasing and more.

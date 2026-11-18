@@ -89,16 +89,24 @@ def nvenc_available():
         return False
 
 
-def _video_height(p):
-    """Height of a video file (rotation ignored), or None for images, folders and unreadable files."""
+def _video_info(p):
+    """(width, height, sample aspect ratio) of a video file, or None for images, folders and unreadable files."""
     if not path.isfile(p) or classify(p) != "Video":
         return None
     try:
         import av
         with av.open(p) as c:
-            return int(c.streams.video[0].height)
+            st = c.streams.video[0]
+            sar = st.sample_aspect_ratio or st.codec_context.sample_aspect_ratio
+            sar = float(sar) if sar and float(sar) > 0 else 1.0
+            return int(st.width), int(st.height), sar
     except Exception:
         return None
+
+
+# Layouts where the two eyes share one frame that a 3D display splits in half. If the picture isn't 16:9 the
+# player pillarboxes it, the halves no longer line up with the screen halves, and the 3D breaks.
+_SPLIT_LAYOUTS = ("Half SBS", "Full SBS", "Half Top", "Full Top", "Cross")
 
 
 def build_args(s, input_path, output_dir, preview=False):
@@ -131,18 +139,28 @@ def build_args(s, input_path, output_dir, preview=False):
     # and shrink the batch for anything bigger than 1080p so it stays inside GPU memory.
     batch = int(s["batch_size"])
     vf = ""
+    pad_mode = "tblr"
     max_h = int(s.get("max_height", 1080) or 0)
-    src_h = _video_height(input_path)
-    if src_h:
+    info = _video_info(input_path)
+    if info:
+        src_w, src_h, sar = info
+        filters = []
+        if abs(sar - 1.0) > 0.01:                       # DVD-style non-square pixels (e.g. 720x480 at 8:9)
+            filters.append("scale='trunc(iw*sar/2)*2':ih:flags=bicubic,setsar=1")
         work_h = min(src_h, max_h) if max_h else src_h
         if max_h and src_h > max_h:
-            vf = f"scale=-2:{max_h - max_h % 2}:flags=bicubic"
+            filters.append(f"scale=-2:{max_h - max_h % 2}:flags=bicubic")
+        vf = ",".join(filters)
         if work_h > 1100:
             batch = max(1, round(batch * (1080 / work_h) ** 2))
+        # 4:3 (or any picture narrower than 16:9): add black side bars to each eye so the frame is 16:9
+        if s.get("pad_16x9", True) and s["layout"].startswith(_SPLIT_LAYOUTS) and src_w * sar / src_h < 16 / 9 - 0.02:
+            pad_mode = "16:9"
 
     parser.set_defaults(
         input=input_path,
         vf=vf,
+        pad_mode=pad_mode,
         output=output_dir,
         yes=True,
         gpu=[gpu],

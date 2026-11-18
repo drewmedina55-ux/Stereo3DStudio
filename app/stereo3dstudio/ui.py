@@ -1357,6 +1357,10 @@ class MainWindow(QMainWindow):
         for label, v in (("1080p · fast (recommended)", 1080), ("1440p", 1440), ("4K · 2160p (slow)", 2160),
                          ("720p · fastest", 720), ("Source size (no scaling)", 0)):
             self.cb_maxh.addItem(label, v)
+        self.ck_pad169 = QCheckBox("Fit 4:3 videos to 16:9 (black side bars)")
+        self.ck_pad169.setToolTip("Needed for 3D on the Odyssey 3D and 3D TVs: they split the screen in half, so a "
+                                  "4:3 side-by-side frame that the player shrinks to fit puts each eye in the wrong place.")
+        g.addWidget(self.ck_pad169, g.rowCount(), 1)
 
         g.addWidget(section("Stability"), g.rowCount(), 0, 1, 2)
         self.ck_ema = QCheckBox("Flicker reduction (smooth depth over time)")
@@ -1579,6 +1583,7 @@ class MainWindow(QMainWindow):
         self.ck_srcfps.setChecked(s["keep_source_fps"])
         i = self.cb_maxh.findData(int(s.get("max_height", 1080)))
         self.cb_maxh.setCurrentIndex(i if i >= 0 else 0)
+        self.ck_pad169.setChecked(bool(s.get("pad_16x9", True)))
         self.ck_ema.setChecked(s["ema_normalize"])
         self.sl_ema.setValue(s["ema_decay"])
         self.ck_scene.setChecked(s["scene_detect"])
@@ -1632,6 +1637,7 @@ class MainWindow(QMainWindow):
             "max_fps": self.sp_fps.value(),
             "keep_source_fps": self.ck_srcfps.isChecked(),
             "max_height": int(self.cb_maxh.currentData()),
+            "pad_16x9": self.ck_pad169.isChecked(),
             "ema_normalize": self.ck_ema.isChecked(),
             "ema_decay": round(self.sl_ema.value(), 3),
             "scene_detect": self.ck_scene.isChecked(),

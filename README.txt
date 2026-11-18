@@ -75,6 +75,9 @@ USING IT
       are not drawn in these two modes.
 
 TIPS
+  - 4:3 / DVD videos: keep "Fit 4:3 videos to 16:9" on (Video tab) -
+    without the side bars a 3D screen splits the picture in the wrong
+    place and the 3D breaks.
   - 4K videos: Video tab > Processing size. 1080p (default) is several
     times faster than 4K; choose 1440p or 4K for more detail.
   - Samsung Odyssey 3D, 3D TVs: Half SBS.  Headsets: VR180 or Full SBS.
