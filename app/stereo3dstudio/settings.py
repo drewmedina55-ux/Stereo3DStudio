@@ -77,13 +77,14 @@ PIX_FMTS = ["yuv420p", "yuv444p", "yuv420p10le", "rgb24"]
 
 # Tuned for a 16 GB NVIDIA card + Samsung Odyssey 3D.
 # Best quality that still runs at full GPU speed without running out of VRAM.
-SETTINGS_VERSION = 5
+SETTINGS_VERSION = 6
 
 DEFAULTS = {
     "layout": "Half SBS (Odyssey 3D / 3D TVs)",
     "depth_model": "Any_V2_L",      # best detail; fits 16 GB at default resolution
     "resolution": 0,                # model default (higher multiplies VRAM + time)
     "method": "mlbw_l2_inpaint",    # fills revealed gaps - cleanest edges
+    "max_height": 1080,             # process videos at up to this height (0 = source size)
     "divergence": 2.2,
     "convergence": 0.45,
     "foreground_scale": 0.0,
@@ -193,6 +194,8 @@ def load_last():
         return _merged(keep)
     if ver < 4:
         data["depth_model"] = "Any_V2_L"   # v1.2.2: Depth Anything V2 Large is the default again
+    if ver < 6:
+        data["max_height"] = 1080   # 4K sources were far too slow at full size
     if ver < 5:
         data["divergence"], data["convergence"] = 2.2, 0.45   # new 3D strength / screen plane defaults
     return _merged(data)

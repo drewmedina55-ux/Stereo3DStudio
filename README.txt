@@ -75,6 +75,8 @@ USING IT
       are not drawn in these two modes.
 
 TIPS
+  - 4K videos: Video tab > Processing size. 1080p (default) is several
+    times faster than 4K; choose 1440p or 4K for more detail.
   - Samsung Odyssey 3D, 3D TVs: Half SBS.  Headsets: VR180 or Full SBS.
   - While a video converts it is written as _tmp_<name>; it gets its
     real name only when finished. Don't judge the _tmp_ file.

@@ -1351,6 +1351,12 @@ class MainWindow(QMainWindow):
         fl.addWidget(self.ck_srcfps)
         fl.addStretch(1)
         self._row(g, "Max FPS", fps)
+        self.cb_maxh = self._row(g, "Processing size", QComboBox(),
+                                 "Videos taller than this are scaled down before converting. 4K takes about 4x the "
+                                 "time and GPU memory of 1080p; Half SBS from 1080p looks great on the Odyssey 3D.")
+        for label, v in (("1080p · fast (recommended)", 1080), ("1440p", 1440), ("4K · 2160p (slow)", 2160),
+                         ("720p · fastest", 720), ("Source size (no scaling)", 0)):
+            self.cb_maxh.addItem(label, v)
 
         g.addWidget(section("Stability"), g.rowCount(), 0, 1, 2)
         self.ck_ema = QCheckBox("Flicker reduction (smooth depth over time)")
@@ -1571,6 +1577,8 @@ class MainWindow(QMainWindow):
         self.cb_pix.setCurrentText(s["pix_fmt"])
         self.sp_fps.setValue(s["max_fps"])
         self.ck_srcfps.setChecked(s["keep_source_fps"])
+        i = self.cb_maxh.findData(int(s.get("max_height", 1080)))
+        self.cb_maxh.setCurrentIndex(i if i >= 0 else 0)
         self.ck_ema.setChecked(s["ema_normalize"])
         self.sl_ema.setValue(s["ema_decay"])
         self.ck_scene.setChecked(s["scene_detect"])
@@ -1623,6 +1631,7 @@ class MainWindow(QMainWindow):
             "pix_fmt": self.cb_pix.currentText(),
             "max_fps": self.sp_fps.value(),
             "keep_source_fps": self.ck_srcfps.isChecked(),
+            "max_height": int(self.cb_maxh.currentData()),
             "ema_normalize": self.ck_ema.isChecked(),
             "ema_decay": round(self.sl_ema.value(), 3),
             "scene_detect": self.ck_scene.isChecked(),

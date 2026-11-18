@@ -33,6 +33,8 @@ the result as side-by-side (SBS) 3D video — with a queue, presets, live previe
 - **Frame preview** with side-by-side, anaglyph, wiggle and single-eye views.
 - **Settings travel with the file** — every output video stores the settings used; drop it back into the window to
   restore them. Output names include the depth model.
+- **Processing size** — 4K videos are converted at 1080p by default (several times faster); pick 1440p, 4K or
+  source size in the Video tab when you want the extra detail.
 - Auto-crop letterbox bars, flicker reduction, scene-cut detection, flip TTA, depth anti-aliasing and more.
 
 ## 3D output modes

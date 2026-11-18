@@ -89,6 +89,18 @@ def nvenc_available():
         return False
 
 
+def _video_height(p):
+    """Height of a video file (rotation ignored), or None for images, folders and unreadable files."""
+    if not path.isfile(p) or classify(p) != "Video":
+        return None
+    try:
+        import av
+        with av.open(p) as c:
+            return int(c.streams.video[0].height)
+    except Exception:
+        return None
+
+
 def build_args(s, input_path, output_dir, preview=False):
     """Translate Stereo3D Studio settings dict -> iw3 argparse Namespace (without state)."""
     parser = create_parser(required_true=False)
@@ -115,8 +127,22 @@ def build_args(s, input_path, output_dir, preview=False):
     if video_format != "avi" and codec in ("utvideo",):
         video_format = "avi"
 
+    # Processing size: scale tall videos down first (4K at full size is ~4x slower and can overflow VRAM),
+    # and shrink the batch for anything bigger than 1080p so it stays inside GPU memory.
+    batch = int(s["batch_size"])
+    vf = ""
+    max_h = int(s.get("max_height", 1080) or 0)
+    src_h = _video_height(input_path)
+    if src_h:
+        work_h = min(src_h, max_h) if max_h else src_h
+        if max_h and src_h > max_h:
+            vf = f"scale=-2:{max_h - max_h % 2}:flags=bicubic"
+        if work_h > 1100:
+            batch = max(1, round(batch * (1080 / work_h) ** 2))
+
     parser.set_defaults(
         input=input_path,
+        vf=vf,
         output=output_dir,
         yes=True,
         gpu=[gpu],
@@ -144,7 +170,7 @@ def build_args(s, input_path, output_dir, preview=False):
         hwaccel=("cuda" if (s["hwaccel_decode"] and gpu >= 0) else None),
         autocrop=(s["autocrop"] or None),
         format=("png" if preview else s["image_format"]),
-        batch_size=int(s["batch_size"]),
+        batch_size=batch,
         low_vram=bool(s["low_vram"]),
         disable_amp=not bool(s["fp16"]),
         max_workers=int(s["max_workers"]),
