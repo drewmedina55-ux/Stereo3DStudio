@@ -17,6 +17,21 @@ Stereo3D Studio is a desktop app built on [iw3](https://github.com/nagadomi/nuni
 2D-to-stereo engine. It estimates depth with modern AI depth models, builds a second eye for every frame, and encodes
 the result as side-by-side (SBS) 3D video — with a queue, presets, live preview and a one-click Windows installer.
 
+## Sample: 2D → 3D
+
+<p align="center">
+  <a href="https://github.com/drewmedina55-ux/Stereo3DStudio/raw/main/docs/sample/elephants_Any_V2_L_HSBS.mp4">
+    <img src="docs/sample/elephants_preview.gif" width="800" alt="Elephants converted to Half SBS 3D with Stereo3D Studio">
+  </a>
+</p>
+
+A 4K stock clip converted to Half SBS 3D with Depth Anything V2 Large (Odyssey 3D preset, 1080p processing).
+**[⬇ Download the 3D video](https://github.com/drewmedina55-ux/Stereo3DStudio/raw/main/docs/sample/elephants_Any_V2_L_HSBS.mp4)**
+(MP4, HEVC, 1920×1080 Half SBS, 22 s, 34 MB) and play it fullscreen in a 3D player or on the Odyssey 3D — or
+free-view the preview above (parallel).
+
+Source footage: [Footage of Elephants Eating Together](https://www.pexels.com/video/footage-of-elephants-eating-together-3842822/) on Pexels.
+
 ## Features
 
 - **Drag & drop queue** for videos, images and whole folders, with thumbnails; finished items leave the queue.
