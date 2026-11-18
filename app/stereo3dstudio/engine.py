@@ -90,7 +90,8 @@ def nvenc_available():
 
 
 def _video_info(p):
-    """(width, height, sample aspect ratio) of a video file, or None for images, folders and unreadable files."""
+    """(width, height, sample aspect ratio, pixel format) of a video file, or None for images, folders and
+    unreadable files."""
     if not path.isfile(p) or classify(p) != "Video":
         return None
     try:
@@ -99,9 +100,18 @@ def _video_info(p):
             st = c.streams.video[0]
             sar = st.sample_aspect_ratio or st.codec_context.sample_aspect_ratio
             sar = float(sar) if sar and float(sar) > 0 else 1.0
-            return int(st.width), int(st.height), sar
+            return int(st.width), int(st.height), sar, (st.codec_context.format.name if st.codec_context.format else "")
     except Exception:
         return None
+
+
+# The engine's GPU-decode path only handles yuv420p / yuv420p10le sources. Others (full-range "yuvj420p" from
+# phones and stock sites, 4:2:2, 4:4:4...) fail with "Invalid argument returned 22", so they decode on the CPU.
+_NVDEC_PIX_FMTS = {"yuv420p", "yuv420p10le", ""}
+
+
+def _nvdec_ok(info):
+    return info is None or info[3] in _NVDEC_PIX_FMTS
 
 
 # Layouts where the two eyes share one frame that a 3D display splits in half. If the picture isn't 16:9 the
@@ -143,7 +153,7 @@ def build_args(s, input_path, output_dir, preview=False):
     max_h = int(s.get("max_height", 1080) or 0)
     info = _video_info(input_path)
     if info:
-        src_w, src_h, sar = info
+        src_w, src_h, sar, pix_fmt = info
         # One plain "scale=W:H" with numbers: it works both in FFmpeg and in the GPU-decode (NVDEC) filter path,
         # which supports only a few filters and no SAR expressions.
         work_h = min(src_h, max_h) if max_h else src_h
@@ -185,7 +195,7 @@ def build_args(s, input_path, output_dir, preview=False):
         ema_normalize=bool(s["ema_normalize"]),
         ema_decay=float(s["ema_decay"]),
         scene_detect=bool(s["scene_detect"]) and not preview,
-        hwaccel=("cuda" if (s["hwaccel_decode"] and gpu >= 0) else None),
+        hwaccel=("cuda" if (s["hwaccel_decode"] and gpu >= 0 and _nvdec_ok(info)) else None),
         autocrop=(s["autocrop"] or None),
         format=("png" if preview else s["image_format"]),
         batch_size=batch,

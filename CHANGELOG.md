@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3
+- Fixed "Invalid argument returned 22" on some phone and stock videos (full-range `yuvj420p`, 4:2:2, 4:4:4):
+  these now decode on the CPU, because the engine's GPU-decode path only supports standard 4:2:0 video.
+
 ## 1.0.2
 - **4:3 videos now convert correctly** (DVDs, classic cartoons and TV). Each eye gets black side bars so the
   side-by-side / top-bottom frame is 16:9: 3D displays split the screen in half, and a 4:3 frame that the player
