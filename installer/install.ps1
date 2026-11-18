@@ -7,7 +7,7 @@ $ProgressPreference = "SilentlyContinue"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $Root = Split-Path -Parent $PSScriptRoot
-$Version = "1.0"
+$Version = "1.0.1"
 $Runtime = Join-Path $Root "runtime"
 $Tools = Join-Path $PSScriptRoot "tools"
 $LogFile = Join-Path $Root "install_log.txt"
