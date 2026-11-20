@@ -27,7 +27,7 @@ the result as side-by-side (SBS) 3D video — with a queue, presets, live previe
 
 A collection of clips converted to 3D with Stereo3D Studio.<br>
 **[▶ Watch on YouTube](https://youtu.be/vYIqblgsJ9o)**<br>
-**[⬇ Download the high quality version](https://1drv.ms/v/c/1f85c9e842de5eb2/IQDnOzHKz22cSInHg-TXxxNiAWubfjLrqCt63LLyKKqWC4c?e=hpiAWL)** (watch in 3D on a compatible device).
+**[⬇ Download the high quality version](https://1drv.ms/f/c/1f85c9e842de5eb2/IgAjcoXeWYCaSZ3xKUG53v7lAQbykXhXwq4jJwUtVYFFXB0?e=GlCYd6)** (watch in 3D on a compatible device).
 
 <p align="center">
   <a href="https://github.com/drewmedina55-ux/Stereo3DStudio/raw/main/docs/sample/candles_Any_V2_L_HSBS.mp4">
