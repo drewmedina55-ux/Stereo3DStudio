@@ -20,17 +20,13 @@ the result as side-by-side (SBS) 3D video — with a queue, presets, live previe
 ## Samples: 2D → 3D
 
 <p align="center">
-  <a href="https://github.com/drewmedina55-ux/Stereo3DStudio/raw/main/docs/sample/elephants_Any_V2_L_HSBS.mp4">
-    <img src="docs/sample/elephants_preview.gif" width="800" alt="Elephants converted to Half SBS 3D with Stereo3D Studio">
+  <a href="https://youtu.be/vYIqblgsJ9o">
+    <img src="https://img.youtube.com/vi/vYIqblgsJ9o/hqdefault.jpg" width="800" alt="A collection of clips converted to 3D with Stereo3D Studio — watch on YouTube">
   </a>
 </p>
 
-A 4K stock clip converted to Half SBS 3D with Depth Anything V2 Large (Odyssey 3D preset, 1080p processing).
-**[⬇ Download the 3D video](https://github.com/drewmedina55-ux/Stereo3DStudio/raw/main/docs/sample/elephants_Any_V2_L_HSBS.mp4)**
-(MP4, HEVC, 1920×1080 Half SBS, 22 s, 34 MB) and play it fullscreen in a 3D player or on the Odyssey 3D — or
-free-view the preview above (parallel).
-
-Source footage: [Footage of Elephants Eating Together](https://www.pexels.com/video/footage-of-elephants-eating-together-3842822/) on Pexels.
+A collection of clips converted to 3D with Stereo3D Studio.
+**[▶ Watch on YouTube](https://youtu.be/vYIqblgsJ9o)**
 
 <p align="center">
   <a href="https://github.com/drewmedina55-ux/Stereo3DStudio/raw/main/docs/sample/candles_Any_V2_L_HSBS.mp4">
