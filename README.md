@@ -46,10 +46,14 @@ Source footage: [Women Holding Lighted Candles](https://www.pexels.com/video/wom
 - **Drag & drop queue** for videos, images and whole folders, with thumbnails; finished items leave the queue.
 - **Odyssey 3D presets** — Half SBS output, Depth Anything V2 Large, MLBW + inpaint stereo, tuned for 16 GB GPUs.
 - **Every 3D format**: Half / Full SBS, top-bottom, VR180, cross-eyed, anaglyph, RGB + depth — see [3D output modes](#3d-output-modes).
-- **Many depth models**: Depth Anything V2 / V3, Video Depth Anything (least flicker), Distill Any Depth,
-  Depth Pro, ZoeDepth — non-commercial models are downloaded from their official pages after you accept the license.
+- **🆕 Apple Depth Pro 2** — Apple's newest depth model: sharp edges and flicker-free depth for video, in four
+  sizes. See [Apple Depth Pro 2](#-apple-depth-pro-2).
+- **Many depth models**: Depth Pro 2, Depth Anything V2 / V3, Video Depth Anything, Distill Any Depth, Depth Pro,
+  ZoeDepth — non-commercial models are downloaded from their official pages after you accept the license.
 - **GPU everywhere**: CUDA depth + stereo, NVENC encoding, NVDEC decoding, FP16; recovers automatically
   from out-of-memory errors.
+- **🆕 Moments preview** — put your own moments on a filmstrip timeline and convert just those, for repeatable
+  A/B tests of models and settings. See [Moments preview](#-moments-preview--ab-testing).
 - **Live view** — a small window that shows a converted frame every N frames while encoding
   (parallel, cross-eyed or raw) so you can judge the 3D by free-viewing. Pin it to the main window or let it float.
 - **Titles** — text that fades in, holds and fades out at the start or end of a video, with font, colour,
@@ -59,8 +63,6 @@ Source footage: [Women Holding Lighted Candles](https://www.pexels.com/video/wom
   restore them. Output names include the depth model.
 - **4:3 and DVD videos** — non-square DVD pixels are corrected and 4:3 pictures get side bars in each eye, so
   side-by-side 3D lines up on 16:9 3D screens.
-- **Apple Depth Pro 2** — sharp, flicker-free depth for video (Small to Huge+), downloaded from Apple in the
-  Models window. Research-use-only license.
 - **Processing size** — 4K videos are converted at 1080p by default (several times faster); pick 1440p, 4K or
   source size in the Video tab when you want the extra detail.
 - Auto-crop letterbox bars, flicker reduction, scene-cut detection, flip TTA, depth anti-aliasing and more.
@@ -119,15 +121,62 @@ dialogue, action, dark scenes and wide shots. Tweak the settings and run another
 or press **Convert to 3D** when it looks right. Reel length and moment length are adjustable, and the reel is saved as
 `<name>_conversion-preview_<model>_HSBS.mp4` next to your other outputs.
 
-### Moments preview — A/B testing
+## 🆕 Moments preview — A/B testing
 
-Random moments are great for a first look; for comparing models or settings you want the *same* moments every
-time. Under the reel is a **Moments** timeline: a filmstrip of the selected video where you place your own
-moments — double-click to add one, drag to move it, drag its edges to resize, right-click to remove. Click
-**Moments preview** to convert only those moments. Change the depth model or any setting and run it again: the
-moments don't change, the model name is in the file name, and earlier runs are kept (`_01`, `_02`…), so you can
-compare them side by side. The moments are shared by every clip in the queue — tick **All videos in the queue**
-to convert the same moments of each one.
+<p align="center"><img src="docs/moments_timeline.png" width="900" alt="The Moments timeline in Stereo3D Studio: a filmstrip with two red moments placed on it"></p>
+
+The conversion preview reel picks **random** moments — great for a first look, but every click shows different
+scenes, so it can't tell you whether a new model or setting is really better. **Moments preview** fixes that: you
+pick the scenes once, and every test uses exactly the same frames.
+
+1. Select a video in the queue. The **Moments** timeline under the reel shows a filmstrip of it.
+2. Place your moments — the shots that matter for judging 3D: faces, fine detail like hair or foliage, fast
+   action, dark scenes, wide landscapes.
+   - **Double-click** the strip (or click **+ Add moment**) to add a moment at that point, as long as the
+     "s moments" value.
+   - **Drag** a moment to move it, **drag its edges** to change its length, **right-click** it to remove it.
+   - The white playhead follows the **Preview** slider, so you can scrub to a spot and check it with
+     **Preview frame** first.
+3. Click **Moments preview**. Only those moments are cut out (with their sound), joined and converted.
+4. Change the depth model, 3D strength, stereo method or anything else, and click **Moments preview** again.
+
+Every run is saved as `<name>_moments-preview_<model>_HSBS.mp4`, and a new run never overwrites an older one
+(`_01`, `_02`…) — so you end up with a set of short clips of identical scenes that you can play back to back on the
+Odyssey 3D and compare like for like.
+
+Your moments are remembered between sessions and shared by **every clip in the queue**; choosing a preset doesn't
+change them. Tick **All videos in the queue** to convert the same moments of each video in one go — handy for
+episodes of a series or several cuts of the same film. Moments that start after a video ends are skipped.
+
+## 🆕 Apple Depth Pro 2
+
+[Depth Pro 2](https://huggingface.co/apple/DepthPro2) is Apple's newest depth model, and Stereo3D Studio 1.1 is
+built to use it for 3D conversion.
+
+- **Sharp edges.** It's designed to keep depth crisp at object boundaries — hair, fingers, leaves, thin rails — which
+  is exactly where 2D→3D conversion usually smears or "halos".
+- **Stable video depth.** Depth Pro 2 is a multi-frame model: each frame also looks at the frames before it, so the
+  depth stays steady instead of flickering or "breathing" from frame to frame. Stereo3D Studio keeps that memory
+  for up to 16 frames and clears it at every new video and scene cut, so one shot never leaks into the next.
+- **Four sizes** — pick speed or detail:
+
+  | Model | Download | Good for |
+  |---|---|---|
+  | Depth Pro 2 · Small | 97 MB | Fast tests, lower-end GPUs |
+  | Depth Pro 2 · Base | 386 MB | Good balance |
+  | Depth Pro 2 · Large | 1.3 GB | **Recommended** — sharp and stable |
+  | Depth Pro 2 · Huge+ | 3.5 GB | Sharpest; needs a lot of GPU memory and is slow |
+
+- **How to get it:** open **Models**, select a Depth Pro 2 size, accept its license and click **Download** — it comes
+  straight from Apple into your `models` folder. Then choose it under **Depth model**.
+- **Depth resolution** sets how much detail it works at (default 576 px tall, then scaled up to the full frame).
+  Edge fix and flip TTA work with it too.
+- **Tip:** use **Moments preview** to compare Depth Pro 2 with Depth Anything V2 on the same scenes.
+
+> **License:** the Depth Pro 2 weights are under the **Apple Machine Learning Research Model License — research use
+> only, non-commercial**. They are not included with Stereo3D Studio; you download them from Apple and accept that
+> license yourself. Apple's Depth Pro 2 code is bundled unmodified in `thirdparty/depth_pro_2` under Apple's license
+> (see `thirdparty/depth_pro_2_licenses`).
 
 ## Requirements
 
@@ -187,7 +236,8 @@ on a Windows runner (including the launcher EXE) and publishes it as release `v<
 
 | Path | What it is |
 |---|---|
-| `app/stereo3dstudio/` | The application: UI (PySide6), engine bridge, model manager, conversion-preview reel, title overlay |
+| `app/stereo3dstudio/` | The application: UI (PySide6), engine bridge, model manager, conversion-preview reel, moments preview, Depth Pro 2 integration, title overlay |
+| `thirdparty/depth_pro_2/` | Unmodified copy of Apple's [Depth Pro 2](https://github.com/apple-aiml-research/ml-depth-pro-2) code |
 | `engine/` | Unmodified snapshot of [nunif](https://github.com/nagadomi/nunif) (iw3), see `engine/ENGINE_VERSION.txt` |
 | `installer/` | PowerShell installer, model pre-download helper, launcher source |
 | `assets/` | App icon, splash screen, logo |
