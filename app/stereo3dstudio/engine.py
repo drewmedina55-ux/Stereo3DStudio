@@ -272,7 +272,7 @@ if not isinstance(_VP.av, _AvShim):
 
 # settings that describe the conversion (not folders or window state)
 _META_SKIP = {"output_dir", "recursive", "resume", "metadata_in_name", "live_view", "live_every",
-              "live_mode", "reel_total", "reel_clip", "settings_version"}
+              "live_mode", "reel_total", "reel_clip", "reel_moments", "settings_version"}
 
 
 def settings_comment(settings, source_name):
@@ -506,8 +506,10 @@ class Converter:
                 if self.stop_event.is_set():
                     stopped = True
                     break
-                if opts.get("sizzle"):
-                    stopped = self._run_sizzle(index, input_path, settings, output_dir, *opts["sizzle"])
+                if opts.get("sizzle") or opts.get("moments"):
+                    total_clip = opts.get("sizzle") or (0, 0)
+                    stopped = self._run_sizzle(index, input_path, settings, output_dir, *total_clip,
+                                               moments=opts.get("moments"))
                     if stopped:
                         break
                     continue
@@ -536,24 +538,33 @@ class Converter:
             self.on_done(stopped)
 
     # ---- conversion preview (sizzle reel)
-    def _run_sizzle(self, index, input_path, settings, output_dir, total_sec, clip_sec):
-        """Build a short 2D reel of random moments, convert it, return True if stopped."""
+    def _run_sizzle(self, index, input_path, settings, output_dir, total_sec, clip_sec, moments=None):
+        """Build a short 2D reel of random moments (or your own `moments`), convert it, return True if stopped."""
         import shutil
         import tempfile
         from .sizzle import build_sizzle
         stem = path.splitext(path.basename(input_path))[0]
         tmp_dir = tempfile.mkdtemp(prefix="Stereo3DStudio_reel_")
-        reel = path.join(tmp_dir, f"{stem}_conversion-preview.mp4")
+        kind = "moments-preview" if moments else "conversion-preview"
+        moments_in = list(moments) if moments else None
+        reel = path.join(tmp_dir, f"{stem}_{kind}.mp4")
         t0 = time.time()
         try:
-            self.on_item(index, "Working", "picking preview moments…")
-            self.on_log(f"▶ Conversion preview of {path.basename(input_path)}: "
-                        f"{total_sec:g}s from {clip_sec:g}s moments")
+            self.on_item(index, "Working", "cutting your moments…" if moments else "picking preview moments…")
+            if moments:
+                self.on_log(f"▶ Moments preview of {path.basename(input_path)}: {len(moments)} moments, "
+                            f"{sum(b for _, b in moments):g}s")
+            else:
+                self.on_log(f"▶ Conversion preview of {path.basename(input_path)}: "
+                            f"{total_sec:g}s from {clip_sec:g}s moments")
             bar = ProgressBar(self.on_progress, total=1, desc=f"{stem}: picking moments")
-            moments = build_sizzle(input_path, reel, total_sec, clip_sec, stop_event=self.stop_event,
+            moments = build_sizzle(input_path, reel, total_sec, clip_sec, stop_event=self.stop_event, moments=moments,
                                    progress=lambda d, t: (setattr(bar, "total", t), setattr(bar, "n", d - 1),
                                                           bar.update(1)))
             bar.close()
+            given = len(moments_in) if moments_in else 0
+            if given and len(moments) < given:
+                self.on_log(f"{given - len(moments)} moment(s) start after this video ends — skipped.")
             self.on_log("Moments used: " + ", ".join(
                 f"{int(st // 3600)}:{int(st % 3600 // 60):02d}:{int(st % 60):02d}" for st, _ in moments))
             self.on_item(index, "Working", "converting preview…")
@@ -564,11 +575,12 @@ class Converter:
                 self.on_item(index, "Stopped", "")
                 return True
             outs = sorted((f for f in os.listdir(output_dir)
-                           if f.startswith(f"{stem}_conversion-preview") and not f.startswith("_tmp_")),
+                           if f.startswith(f"{stem}_{kind}") and not f.startswith("_tmp_")),
                           key=lambda f: os.path.getmtime(path.join(output_dir, f)))
-            name = outs[-1] if outs else f"{stem}_conversion-preview"
+            name = outs[-1] if outs else f"{stem}_{kind}"
             self.on_item(index, "Preview ready", name)
-            self.on_log(f"✔ Conversion preview saved: {path.join(output_dir, name)} — {time.time() - t0:.1f}s")
+            what = "Moments preview" if moments_in else "Conversion preview"
+            self.on_log(f"✔ {what} saved: {path.join(output_dir, name)} — {time.time() - t0:.1f}s")
         except Exception as e:  # noqa
             if self.stop_event.is_set():
                 self.on_item(index, "Stopped", "")

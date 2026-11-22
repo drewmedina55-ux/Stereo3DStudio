@@ -111,7 +111,6 @@ def main():
         splash = QSplashScreen(pm)
         splash.setAttribute(Qt.WA_TranslucentBackground)       # rounded, bevelled corners
         splash.show()
-        splash.showMessage("Loading GPU engine…", Qt.AlignBottom | Qt.AlignHCenter, Qt.white)
         app.processEvents()
 
     try:

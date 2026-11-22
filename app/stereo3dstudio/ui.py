@@ -314,6 +314,258 @@ def progress_color(frac):
     return ORANGE if frac >= 0.5 else RED
 
 
+def _fmt_t(t):
+    t = max(0.0, float(t))
+    h, m, sec = int(t // 3600), int(t % 3600 // 60), t % 60
+    return f"{h}:{m:02d}:{sec:04.1f}" if h else f"{m}:{sec:04.1f}"
+
+
+class MomentTimeline(QWidget):
+    """Filmstrip timeline of the selected video with your own preview moments on it.
+
+    Click or drag on the strip to move the playhead · double-click to add a moment there ·
+    drag a moment to move it · drag its edges to change its length · right-click a moment to remove it.
+    The moments are shared by every clip in the queue, so the same moments can be converted again with
+    another model or other settings for a fair A/B comparison."""
+    changed = Signal()                      # moments edited
+    playhead_moved = Signal(float)          # seconds
+    _thumbs_ready = Signal(int, object)     # generation, [QImage]
+
+    STRIP_H, RULER_H, EDGE = 54, 18, 7
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMinimumHeight(self.STRIP_H + self.RULER_H + 6)
+        self.setMouseTracking(True)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.duration = 0.0
+        self.moments = []                   # [[start, length], ...]
+        self.playhead = 0.0
+        self.default_len = 8.0
+        self.thumbs = []
+        self._gen = 0
+        self._drag = None                   # (mode, index, grab offset seconds)
+        self._thumbs_ready.connect(self._on_thumbs)
+
+    # ----- data
+    def set_video(self, video_path, duration):
+        self.duration = max(0.0, float(duration or 0))
+        self.playhead = min(self.playhead, self.duration)
+        self.thumbs = []
+        self._gen += 1
+        if video_path and self.duration > 0:
+            gen, n = self._gen, 14
+            threading.Thread(target=self._load_thumbs, args=(gen, video_path, n), daemon=True).start()
+        self.update()
+
+    def _load_thumbs(self, gen, video_path, n):
+        imgs = []
+        try:
+            import av
+            with av.open(video_path) as c:
+                st = c.streams.video[0]
+                st.thread_type = "AUTO"
+                for i in range(n):
+                    if gen != self._gen:
+                        return
+                    t = self.duration * (i + 0.5) / n
+                    try:
+                        c.seek(int(t / st.time_base), stream=st, backward=True, any_frame=False)
+                        for fr in c.decode(st):
+                            im = fr.to_image()
+                            im.thumbnail((160, 90))
+                            data = im.convert("RGB").tobytes()
+                            imgs.append(QImage(data, im.width, im.height, im.width * 3,
+                                               QImage.Format_RGB888).copy())
+                            break
+                    except Exception:
+                        imgs.append(None)
+        except Exception:
+            pass
+        self._thumbs_ready.emit(gen, imgs)
+
+    def _on_thumbs(self, gen, imgs):
+        if gen == self._gen:
+            self.thumbs = [QPixmap.fromImage(i) if i is not None else None for i in imgs]
+            self.update()
+
+    def set_moments(self, moments):
+        self.moments = [[float(a), float(b)] for a, b in (moments or [])]
+        self.update()
+
+    def get_moments(self):
+        return sorted([round(a, 2), round(b, 2)] for a, b in self.moments)
+
+    def set_playhead(self, t, emit=False):
+        self.playhead = max(0.0, min(float(t), self.duration))
+        self.update()
+        if emit:
+            self.playhead_moved.emit(self.playhead)
+
+    def add_moment(self, at=None, length=None):
+        if self.duration <= 0:
+            return
+        length = float(length or self.default_len)
+        start = self.playhead if at is None else at
+        start = max(0.0, min(start, max(0.0, self.duration - length)))
+        self.moments.append([start, min(length, self.duration)])
+        self.changed.emit()
+        self.update()
+
+    def clear_moments(self):
+        self.moments = []
+        self.changed.emit()
+        self.update()
+
+    # ----- geometry
+    def _strip(self):
+        return QRectF(1, 1, self.width() - 2, self.STRIP_H)
+
+    def _x(self, t):
+        r = self._strip()
+        return r.left() + r.width() * (t / self.duration if self.duration else 0)
+
+    def _t(self, x):
+        r = self._strip()
+        return max(0.0, min(self.duration, (x - r.left()) / max(1.0, r.width()) * self.duration))
+
+    def _hit(self, x):
+        """(mode, index) under x: 'left'/'right' edge or 'move' body, newest moment first."""
+        for i in range(len(self.moments) - 1, -1, -1):
+            a, b = self.moments[i]
+            x0, x1 = self._x(a), self._x(a + b)
+            if abs(x - x0) <= self.EDGE:
+                return "left", i
+            if abs(x - x1) <= self.EDGE:
+                return "right", i
+            if x0 < x < x1:
+                return "move", i
+        return None, -1
+
+    # ----- painting
+    def paintEvent(self, _e):
+        from PySide6.QtGui import QPainter, QPen, QBrush
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        r = self._strip()
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(FIELD))
+        p.drawRoundedRect(r, 8, 8)
+        if self.duration <= 0:
+            p.setPen(QColor(MUTED))
+            p.drawText(r, Qt.AlignCenter, "Select a video in the queue to place your moments")
+            return
+        # filmstrip
+        if self.thumbs:
+            p.save()
+            from PySide6.QtGui import QPainterPath
+            clip = QPainterPath()
+            clip.addRoundedRect(r, 8, 8)
+            p.setClipPath(clip)
+            n = len(self.thumbs)
+            for i, pm in enumerate(self.thumbs):
+                cell = QRectF(r.left() + r.width() * i / n, r.top(), r.width() / n + 1, r.height())
+                if pm is not None and not pm.isNull():
+                    sc = max(cell.width() / pm.width(), cell.height() / pm.height())
+                    w, h = pm.width() * sc, pm.height() * sc
+                    p.drawPixmap(QRectF(cell.center().x() - w / 2, cell.center().y() - h / 2, w, h), pm,
+                                 QRectF(pm.rect()))
+            p.fillRect(r, QColor(0, 0, 0, 90))
+            p.restore()
+        # moments
+        for i, (a, b) in enumerate(self.moments):
+            x0, x1 = self._x(a), self._x(min(a + b, self.duration))
+            box = QRectF(x0, r.top() + 2, max(3.0, x1 - x0), r.height() - 4)
+            p.setPen(QPen(QColor(ACCENT), 2))
+            p.setBrush(QColor(255, 79, 82, 95))
+            p.drawRoundedRect(box, 4, 4)
+            p.setPen(QColor("#ffffff"))
+            f = p.font()
+            f.setPointSizeF(8.5)
+            f.setBold(True)
+            p.setFont(f)
+            if box.width() > 18:
+                p.drawText(box.adjusted(4, 2, -2, 0), Qt.AlignLeft | Qt.AlignTop, str(i + 1))
+        # playhead
+        x = self._x(self.playhead)
+        p.setPen(QPen(QColor("#ffffff"), 2))
+        p.drawLine(int(x), int(r.top()), int(x), int(r.bottom()))
+        # ruler
+        f = p.font()
+        f.setPointSizeF(8)
+        f.setBold(False)
+        p.setFont(f)
+        p.setPen(QColor(MUTED))
+        y = r.bottom() + 3
+        ticks = 6
+        for k in range(ticks + 1):
+            t = self.duration * k / ticks
+            tx = self._x(t)
+            al = Qt.AlignLeft if k == 0 else (Qt.AlignRight if k == ticks else Qt.AlignHCenter)
+            box = QRectF(tx - 60 if k else tx, y, 120 if 0 < k < ticks else 60, self.RULER_H)
+            if k == ticks:
+                box = QRectF(tx - 60, y, 60, self.RULER_H)
+            p.drawText(box, al | Qt.AlignVCenter, _fmt_t(t))
+
+    # ----- mouse
+    def mousePressEvent(self, e):
+        if self.duration <= 0:
+            return
+        x = e.position().x()
+        mode, i = self._hit(x)
+        if e.button() == Qt.RightButton:
+            if i >= 0:
+                del self.moments[i]
+                self.changed.emit()
+                self.update()
+            return
+        if mode:
+            a, _b = self.moments[i]
+            self._drag = (mode, i, self._t(x) - a)
+        else:
+            self._drag = ("scrub", -1, 0.0)
+            self.set_playhead(self._t(x), emit=True)
+
+    def mouseMoveEvent(self, e):
+        x = e.position().x()
+        if self._drag is None:
+            mode, _ = self._hit(x)
+            self.setCursor(Qt.SizeHorCursor if mode in ("left", "right") else
+                           (Qt.OpenHandCursor if mode == "move" else Qt.PointingHandCursor))
+            if mode:
+                a, b = self.moments[_]
+                self.setToolTip(f"Moment {_ + 1}: {_fmt_t(a)} – {_fmt_t(a + b)}  ({b:.1f} s)\n"
+                                "Drag to move · drag an edge to resize · right-click to remove")
+            else:
+                self.setToolTip("Click to move the playhead · double-click to add a moment here")
+            return
+        mode, i, off = self._drag
+        t = self._t(x)
+        if mode == "scrub":
+            self.set_playhead(t, emit=True)
+            return
+        a, b = self.moments[i]
+        if mode == "move":
+            a = max(0.0, min(t - off, self.duration - b))
+        elif mode == "left":
+            end = a + b
+            a = max(0.0, min(t, end - 0.5))
+            b = end - a
+        elif mode == "right":
+            b = max(0.5, min(t, self.duration) - a)
+        self.moments[i] = [a, b]
+        self.update()
+
+    def mouseReleaseEvent(self, e):
+        if self._drag and self._drag[0] != "scrub":
+            self.changed.emit()
+        self._drag = None
+
+    def mouseDoubleClickEvent(self, e):
+        if self.duration > 0 and self._hit(e.position().x())[0] is None:
+            self.add_moment(at=self._t(e.position().x()) - self.default_len / 2)
+
+
 class ColorBar(QProgressBar):
     """Thin progress bar whose colour follows progress_color()."""
 
@@ -1190,6 +1442,44 @@ class MainWindow(QMainWindow):
         tg.addLayout(rrow, 1, 1)
         tg.addWidget(self.btn_reel, 1, 2)
 
+        # your own moments: same moments every time -> fair A/B tests of models and settings
+        self.timeline = MomentTimeline()
+        self.timeline.changed.connect(self._moments_changed)
+        self.timeline.playhead_moved.connect(self._timeline_scrubbed)
+        self.btn_add_moment = QPushButton("+ Add moment")
+        self.btn_add_moment.setToolTip("Adds a moment at the playhead, as long as the “s moments” value above. "
+                                       "Tip: double-click the timeline to add one right there.")
+        self.btn_add_moment.clicked.connect(lambda: self.timeline.add_moment())
+        self.btn_clear_moments = QPushButton("Clear")
+        self.btn_clear_moments.clicked.connect(self.timeline.clear_moments)
+        self.ck_moments_all = QCheckBox("All videos in the queue")
+        self.ck_moments_all.setToolTip("Convert the same moments of every video in the queue "
+                                       "(moments past a video's end are skipped)")
+        self.ck_moments_all.toggled.connect(lambda *_: self._update_buttons())
+        self.lbl_moments = QLabel("")
+        self.lbl_moments.setObjectName("muted")
+        mtools = QHBoxLayout()
+        mtools.setContentsMargins(0, 0, 0, 0)
+        mtools.addWidget(self.btn_add_moment)
+        mtools.addWidget(self.btn_clear_moments)
+        mtools.addWidget(self.lbl_moments, 1)
+        mtools.addWidget(self.ck_moments_all)
+        mcol = QVBoxLayout()
+        mcol.setSpacing(6)
+        mcol.addWidget(self.timeline)
+        mcol.addLayout(mtools)
+        self.btn_moments = QPushButton("Moments preview")
+        self.btn_moments.setToolTip(
+            "Converts only your moments with the current settings. The moments stay the same, so you can run "
+            "it again with another depth model or other settings and compare like for like (A/B testing). "
+            "Moments are shared by every clip in the queue.")
+        self.btn_moments.clicked.connect(self.moments_preview)
+        tg.addWidget(section("Moments"), 2, 0, Qt.AlignTop)
+        tg.addLayout(mcol, 2, 1)
+        tg.addWidget(self.btn_moments, 2, 2, Qt.AlignTop)
+        self.sp_reel_clip.valueChanged.connect(lambda v: setattr(self.timeline, "default_len", float(v)))
+        self.preview_time.valueChanged.connect(self._preview_slider_to_timeline)
+
         self.ed_out = QLineEdit()
         self.ed_out.setPlaceholderText("Empty = a “3D” folder next to each source file")
         b_out = QPushButton("Browse…")
@@ -1202,9 +1492,9 @@ class MainWindow(QMainWindow):
         self.ck_open_done = QCheckBox("Open when done")
         self.ck_open_done.setToolTip("Open the output folder when a conversion or the whole queue has finished")
         orow.addWidget(self.ck_open_done)
-        tg.addWidget(section("Output"), 2, 0)
-        tg.addLayout(orow, 2, 1)
-        tg.addWidget(b_open, 2, 2)
+        tg.addWidget(section("Output"), 3, 0)
+        tg.addLayout(orow, 3, 1)
+        tg.addWidget(b_open, 3, 2)
         tg.setColumnStretch(1, 1)
         leftc.addWidget(tc)
 
@@ -1611,6 +1901,9 @@ class MainWindow(QMainWindow):
         self._live_every = int(s.get("live_every", 100))
         self.sp_reel_total.setValue(int(s.get("reel_total", 60)))
         self.sp_reel_clip.setValue(int(s.get("reel_clip", 8)))
+        self.timeline.default_len = float(self.sp_reel_clip.value())
+        self.timeline.set_moments(s.get("reel_moments", []))
+        self._moments_changed(save=False)
         self._live_mode = int(s.get("live_mode", 1))
         self._live_pinned = bool(s.get("live_pinned", True))
         self.converter.set_live_every(self._live_every)
@@ -1668,6 +1961,7 @@ class MainWindow(QMainWindow):
             "live_every": getattr(self, "_live_every", 100),
             "reel_total": self.sp_reel_total.value(),
             "reel_clip": self.sp_reel_clip.value(),
+            "reel_moments": self.timeline.get_moments(),
             "live_mode": getattr(self, "_live_mode", 1),
             "live_pinned": getattr(self, "_live_pinned", True),
         }
@@ -1733,6 +2027,7 @@ class MainWindow(QMainWindow):
             s = S.load_preset(name)
             s["output_dir"] = self.ed_out.text().strip()
             s.update(self._title_settings())          # presets never change the title
+            s["reel_moments"] = self.timeline.get_moments()   # ... or your moments
             self._apply(s)
             self.append_log(f"Preset loaded: {name}")
         except Exception as e:
@@ -1937,6 +2232,8 @@ class MainWindow(QMainWindow):
             self._dur = E.video_duration(self.items[r]["path"])
         self.preview_time.setEnabled(self._dur > 0)
         self._preview_time_label()
+        self.timeline.set_video(self.items[r]["path"] if self._dur > 0 else None, self._dur)
+        self._moments_changed(save=False)
         self._update_buttons()
 
     def _preview_time_label(self, *_):
@@ -1977,6 +2274,10 @@ class MainWindow(QMainWindow):
                                     and self.items[self._selected_row()]["type"] in ("Image", "Video"))
         self.btn_reel.setEnabled(not busy and self._selected_row() >= 0
                                  and self.items[self._selected_row()]["type"] == "Video")
+        has_videos = any(it["type"] == "Video" for it in self.items)
+        sel_video = self._selected_row() >= 0 and self.items[self._selected_row()]["type"] == "Video"
+        self.btn_moments.setEnabled(not busy and bool(self.timeline.moments)
+                                    and (has_videos if self.ck_moments_all.isChecked() else sel_video))
         for b in (self.btn_add, self.btn_add_dir, self.btn_remove, self.btn_clear):
             b.setEnabled(not self.converter.running())
 
@@ -2011,6 +2312,75 @@ class MainWindow(QMainWindow):
                              self._output_for(item["path"]))
         self._update_buttons()
 
+    # ---------- your moments
+    def _moments_changed(self, save=True):
+        ms = self.timeline.get_moments()
+        dur = getattr(self, "_dur", 0)
+        if ms:
+            total = sum(b for _, b in ms)
+            past = sum(1 for a, _ in ms if dur and a >= dur)
+            txt = f"{len(ms)} moment{'s' if len(ms) != 1 else ''} · {total:.0f} s"
+            if past:
+                txt += f" · {past} past this video's end"
+            self.lbl_moments.setText(txt)
+        else:
+            self.lbl_moments.setText("No moments yet — double-click the timeline")
+        if save:
+            try:
+                S.save_last(self.collect())
+            except Exception:
+                pass
+        if hasattr(self, "btn_moments") and hasattr(self, "btn_start"):
+            self._update_buttons()
+
+    def _timeline_scrubbed(self, t):
+        if getattr(self, "_dur", 0) > 0:
+            self.preview_time.blockSignals(True)
+            self.preview_time.setValue(int(round(t / self._dur * 1000)))
+            self.preview_time.blockSignals(False)
+            self._preview_time_label()
+
+    def _preview_slider_to_timeline(self, v):
+        if getattr(self, "_dur", 0) > 0:
+            self.timeline.set_playhead(self._dur * v / 1000.0)
+
+    def moments_preview(self):
+        if self.converter.running():
+            return
+        moments = [tuple(m) for m in self.timeline.get_moments()]
+        if not moments:
+            return
+        if self.ck_moments_all.isChecked():
+            rows = [i for i, it in enumerate(self.items) if it["type"] == "Video"]
+        else:
+            r = self._selected_row()
+            rows = [r] if r >= 0 and self.items[r]["type"] == "Video" else []
+        if not rows:
+            return
+        s = self.collect()
+        S.save_last(s)
+        if not self._ensure_model(s):
+            return
+        self._pending = [(self.items[r]["id"], self.items[r]["path"], self._output_for(self.items[r]["path"]),
+                          {"moments": moments}) for r in rows]
+        for r in rows:
+            self._set_status(r, "Queued", "")
+        self.job_total, self.job_done = len(rows), 0
+        self.pb_queue.setMaximum(len(rows))
+        self.pb_queue.setValue(0)
+        self.lbl_queue.setText("Moments preview")
+        self.paused = False
+        self.btn_pause.setText("Pause")
+        self._t_start = time.time()
+        self._settings = s
+        self._run_dirs, self._run_ok = [], 0
+        if self.btn_live.isChecked():
+            w = self._ensure_live()
+            w.im = None
+            w.view.setText("Waiting for the first converted frame…")
+            w.show()
+        self._run_next()
+
     def start(self):
         if not self.items:
             return
@@ -2044,10 +2414,10 @@ class MainWindow(QMainWindow):
     def _run_next(self):
         if not self._pending:
             return False
-        i, p, out = self._pending.pop(0)
+        i, p, out, *opts = self._pending.pop(0)
         if out not in self._run_dirs:
             self._run_dirs.append(out)
-        self.converter.start([(i, p)], self._settings, out)
+        self.converter.start([(i, p, opts[0]) if opts else (i, p)], self._settings, out)
         self._update_buttons()
         return True
 
@@ -2128,7 +2498,7 @@ class MainWindow(QMainWindow):
 
     def on_done(self, stopped):
         if stopped:
-            for item_id, _, _ in getattr(self, "_pending", []):
+            for item_id, *_ in getattr(self, "_pending", []):
                 self._set_status(self._row_of(item_id), "Ready", "")
             self._pending = []
         if not stopped and self._run_next():

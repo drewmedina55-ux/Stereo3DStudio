@@ -5,6 +5,10 @@
   for video — each frame also looks at the 16 frames before it, so the depth doesn't flicker. Download them in
   the Models window (Apple ML Research Model License: research use only, non-commercial).
 - The Models window shows each model's own license.
+- **Moments preview** for A/B testing: place your own moments on a new filmstrip timeline (under the Reel)
+  and convert just those. The moments stay fixed and are shared by every clip in the queue, so you can rerun
+  them with another model or settings and compare like for like; each run is kept (`_01`, `_02`…).
+- The load screen no longer shows "Loading GPU engine…".
 
 ## 1.0.3
 - Fixed "Invalid argument returned 22" on some phone and stock videos (full-range `yuvj420p`, 4:2:2, 4:4:4):

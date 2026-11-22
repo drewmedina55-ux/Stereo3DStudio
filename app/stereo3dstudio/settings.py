@@ -134,6 +134,7 @@ DEFAULTS = {
     # conversion preview reel
     "reel_total": 60,
     "reel_clip": 8,
+    "reel_moments": [],             # your own preview moments [[start, length], ...] - shared by every clip
     "open_when_done": True,
     "live_pinned": True,     # Live view locked to the main window
     # title overlay (see title.py)

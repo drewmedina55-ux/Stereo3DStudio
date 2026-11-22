@@ -119,6 +119,16 @@ dialogue, action, dark scenes and wide shots. Tweak the settings and run another
 or press **Convert to 3D** when it looks right. Reel length and moment length are adjustable, and the reel is saved as
 `<name>_conversion-preview_<model>_HSBS.mp4` next to your other outputs.
 
+### Moments preview — A/B testing
+
+Random moments are great for a first look; for comparing models or settings you want the *same* moments every
+time. Under the reel is a **Moments** timeline: a filmstrip of the selected video where you place your own
+moments — double-click to add one, drag to move it, drag its edges to resize, right-click to remove. Click
+**Moments preview** to convert only those moments. Change the depth model or any setting and run it again: the
+moments don't change, the model name is in the file name, and earlier runs are kept (`_01`, `_02`…), so you can
+compare them side by side. The moments are shared by every clip in the queue — tick **All videos in the queue**
+to convert the same moments of each one.
+
 ## Requirements
 
 - Windows 10 or 11, 64-bit

@@ -37,15 +37,33 @@ def _even(x):
     return x - (x % 2)
 
 
-def build_sizzle(src, dst, total_sec=60.0, clip_sec=8.0, seed=None, progress=None, stop_event=None):
-    """Write a 2D clip made of random moments of `src` to `dst`. Returns the moments used."""
+def clamp_moments(moments, duration):
+    """Your own moments [(start, length)], sorted, trimmed to the video; ones past its end are dropped."""
+    out = []
+    for start, length in sorted((float(a), float(b)) for a, b in moments):
+        if duration and start >= duration - 0.2:
+            continue
+        length = min(length, duration - start) if duration else length
+        if length >= 0.2:
+            out.append((round(start, 3), round(length, 3)))
+    return out
+
+
+def build_sizzle(src, dst, total_sec=60.0, clip_sec=8.0, seed=None, progress=None, stop_event=None, moments=None):
+    """Write a 2D clip made of moments of `src` to `dst` — random ones, or the `moments` given
+    [(start, length)] for repeatable A/B tests. Returns the moments used."""
     with av.open(src) as probe:
         dur = probe.duration / 1_000_000 if probe.duration else 0.0
         if not dur and probe.streams.video:
             s = probe.streams.video[0]
             if s.duration and s.time_base:
                 dur = float(s.duration * s.time_base)
-    moments = pick_moments(dur, total_sec, clip_sec, seed)
+    if moments is not None:
+        moments = clamp_moments(moments, dur)
+        if not moments:
+            raise RuntimeError("None of your moments fall inside this video — it is shorter than the first moment.")
+    else:
+        moments = pick_moments(dur, total_sec, clip_sec, seed)
     if not moments:
         raise RuntimeError("Could not read the video's length.")
 
