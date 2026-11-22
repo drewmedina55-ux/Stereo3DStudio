@@ -37,6 +37,14 @@ CATALOG = {
     "Ultimate_DAV2_S": (None, "https://huggingface.co/Jokeru1983/Ultimate_DAV2_ViT-S_Gaming", NC, "~100 MB"),
     "Ultimate_DAV2_B": (None, "https://huggingface.co/Jokeru1983/Ultimate_DAV2_ViT-S_Gaming", NC, "~400 MB"),
 }
+# Apple Depth Pro 2 — weights from Apple's model CDN (the URLs its own code downloads from)
+_APPLE = "Apple ML Research Model License (research use only, non-commercial)"
+_DP2_PAGE = "https://huggingface.co/apple/DepthPro2"
+for _k, _size in (("DepthPro2_S", "97 MB"), ("DepthPro2_B", "386 MB"), ("DepthPro2_L", "1.3 GB"),
+                  ("DepthPro2_H", "3.5 GB")):
+    from .depthpro2 import DOWNLOAD_URLS as _DP2_URLS
+    CATALOG[_k] = (_DP2_URLS[_k], _DP2_PAGE, _APPLE, _size)
+
 # models that share one checkpoint file
 ALIASES = {
     "VDA_Stream_B": "VDA_B", "VDA_Stream_L": "VDA_L",

@@ -7,6 +7,7 @@ from os import path
 HERE = path.dirname(path.abspath(__file__))
 ROOT = path.normpath(path.join(HERE, "..", ".."))           # install root
 ENGINE = path.join(ROOT, "engine")                          # bundled nunif/iw3 source
+THIRDPARTY = path.join(ROOT, "thirdparty")                  # bundled Depth Pro 2 code
 
 
 def _data_dir():
@@ -34,6 +35,8 @@ def _setup_env():
     os.makedirs(path.join(data, "logs"), exist_ok=True)
     if ENGINE not in sys.path:
         sys.path.insert(0, ENGINE)
+    if THIRDPARTY not in sys.path:
+        sys.path.insert(1, THIRDPARTY)
     return data
 
 

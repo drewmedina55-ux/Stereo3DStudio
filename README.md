@@ -59,6 +59,8 @@ Source footage: [Women Holding Lighted Candles](https://www.pexels.com/video/wom
   restore them. Output names include the depth model.
 - **4:3 and DVD videos** — non-square DVD pixels are corrected and 4:3 pictures get side bars in each eye, so
   side-by-side 3D lines up on 16:9 3D screens.
+- **Apple Depth Pro 2** — sharp, flicker-free depth for video (Small to Huge+), downloaded from Apple in the
+  Models window. Research-use-only license.
 - **Processing size** — 4K videos are converted at 1080p by default (several times faster); pick 1440p, 4K or
   source size in the Video tab when you want the extra detail.
 - Auto-crop letterbox bars, flicker reduction, scene-cut detection, flip TTA, depth anti-aliasing and more.

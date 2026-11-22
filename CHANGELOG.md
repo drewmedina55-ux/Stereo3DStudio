@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1
+- **Apple Depth Pro 2** depth models: Small, Base, Large and Huge+. Sharp edges and temporally stable depth
+  for video — each frame also looks at the 16 frames before it, so the depth doesn't flicker. Download them in
+  the Models window (Apple ML Research Model License: research use only, non-commercial).
+- The Models window shows each model's own license.
+
 ## 1.0.3
 - Fixed "Invalid argument returned 22" on some phone and stock videos (full-range `yuvj420p`, 4:2:2, 4:4:4):
   these now decode on the CPU, because the engine's GPU-decode path only supports standard 4:2:0 video.

@@ -6,6 +6,8 @@
 |---|---|---|
 | nunif / iw3 by nagadomi | `engine/` (unmodified snapshot, commit in `engine/ENGINE_VERSION.txt`) | MIT — `engine/LICENSE`; code nunif itself borrows is listed in `engine/NOTICE` |
 
+| Depth Pro 2 by Apple | `thirdparty/depth_pro_2` (unmodified, commit in `thirdparty/DEPTH_PRO_2_VERSION.txt`) | Apple sample code license — `thirdparty/depth_pro_2_licenses/LICENSE`, acknowledgements in `ACKNOWLEDGEMENTS` |
+
 ## Downloaded by the installer (not redistributed here)
 
 | Component | License |
@@ -28,6 +30,7 @@ No model weights are included in this repository or in release packages.
 | Video Depth Anything Base / Large, Metric | **CC BY-NC 4.0 (non-commercial)** |
 | Distill Any Depth Base / Large | see the model page (trained from Depth Anything weights) |
 | Ultimate DAV2 (gaming fine-tunes) | **CC BY-NC 4.0 (non-commercial)** |
+| Apple Depth Pro 2 (S / B / L / H+) | **Apple Machine Learning Research Model License — research use only, non-commercial** (`thirdparty/depth_pro_2_licenses/LICENSE_MODEL`) |
 | Depth Anything V3, Depth Pro, ZoeDepth and others | see each model's page |
 | iw3 stereo / inpaint / anti-aliasing models (nagadomi) | MIT |
 

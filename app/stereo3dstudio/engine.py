@@ -9,6 +9,7 @@ from os import path
 import torch
 
 from iw3 import models  # noqa: F401  (registers model classes)
+from . import depthpro2  # noqa: F401  (registers Apple Depth Pro 2)
 from iw3.utils import create_parser, set_state_args, iw3_main, is_video, is_image
 from iw3.depth_model_factory import get_all_depth_models, is_depth_aa_supported
 from nunif.utils.video import VIDEO_EXTENSIONS, has_nvenc

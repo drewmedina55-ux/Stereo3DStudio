@@ -699,7 +699,7 @@ class ModelManagerDialog(QDialog):
         self.busy = None
         lay = QVBoxLayout(self)
         intro = QLabel(
-            "These higher-quality depth models are released under a <b>non-commercial license</b>, "
+            "These higher-quality depth models are released under a <b>non-commercial or research-only license</b>, "
             "so the 3D engine can't download them automatically. Accept the license below and Stereo3D Studio "
             "fetches them from their official pages. Small models (the default) don't need this.")
         intro.setWordWrap(True)
@@ -726,8 +726,9 @@ class ModelManagerDialog(QDialog):
             self.table.setItem(r, 1, QTableWidgetItem(size))
             self.table.setItem(r, 2, QTableWidgetItem(lic))
             self.table.setItem(r, 3, QTableWidgetItem(""))
-        self.ck_accept = QCheckBox("I accept the model license (CC BY-NC 4.0 — personal / non-commercial use only)")
+        self.ck_accept = QCheckBox("I accept the model license")
         self.ck_accept.toggled.connect(self._sync)
+        self.table.itemSelectionChanged.connect(self._license_text)
         lay.addWidget(self.ck_accept)
         self.pb = QProgressBar()
         self.pb.setVisible(False)
@@ -781,6 +782,13 @@ class ModelManagerDialog(QDialog):
         self.b_cancel.setVisible(not idle)
         self.b_close.setEnabled(idle)
 
+    def _license_text(self):
+        m = self._cur()
+        if m:
+            lic = M.CATALOG[m][2]
+            self.ck_accept.setText(f"I accept this model's license: {lic}")
+            self.ck_accept.setChecked(False)              # accept each license separately
+
     def _open_page(self):
         m = self._cur()
         if m:
@@ -791,7 +799,7 @@ class ModelManagerDialog(QDialog):
         if not m:
             return
         f, _ = QFileDialog.getOpenFileName(self, "Choose the downloaded model file", "",
-                                           "Model files (*.pth *.safetensors)")
+                                           "Model files (*.pth *.pt *.safetensors)")
         if f:
             try:
                 M.import_file(m, f)

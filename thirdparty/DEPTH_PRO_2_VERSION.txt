@@ -1,0 +1,7 @@
+Depth Pro 2 (Apple) - unmodified copy of src/depth_pro_2 from
+https://github.com/apple-aiml-research/ml-depth-pro-2
+commit aa389cbb0b74341664ed663a0966c859905cd6c0
+
+Code: Apple sample code license (depth_pro_2_licenses/LICENSE).
+Model weights are NOT included; they are downloaded from Apple by the user and are under the
+Apple Machine Learning Research Model License (depth_pro_2_licenses/LICENSE_MODEL) - research use only.

@@ -75,6 +75,9 @@ USING IT
       are not drawn in these two modes.
 
 TIPS
+  - Apple Depth Pro 2 (Models window) gives sharp, stable depth for
+    video. Large is a good balance; Huge+ needs a lot of GPU memory.
+    Its license allows research use only (non-commercial).
   - 4:3 / DVD videos: keep "Fit 4:3 videos to 16:9" on (Video tab) -
     without the side bars a 3D screen splits the picture in the wrong
     place and the 3D breaks.
