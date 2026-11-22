@@ -78,6 +78,7 @@ TIPS
   - Moments preview (under the Reel): double-click the timeline to add
     your own moments, then convert just those. They stay the same, so
     you can rerun them with another model or settings and compare.
+    Thanks to u/pagineinternet on Reddit for the idea!
   - Apple Depth Pro 2 (Models window) gives sharp, stable depth for
     video. Large is a good balance; Huge+ needs a lot of GPU memory.
     Its license allows research use only (non-commercial).

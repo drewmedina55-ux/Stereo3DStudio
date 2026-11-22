@@ -8,6 +8,7 @@
 - **Moments preview** for A/B testing: place your own moments on a new filmstrip timeline (under the Reel)
   and convert just those. The moments stay fixed and are shared by every clip in the queue, so you can rerun
   them with another model or settings and compare like for like; each run is kept (`_01`, `_02`…).
+  Thanks to [u/pagineinternet](https://www.reddit.com/user/pagineinternet/) on Reddit for the idea!
 - The load screen no longer shows "Loading GPU engine…".
 
 ## 1.0.3

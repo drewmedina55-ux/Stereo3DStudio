@@ -148,6 +148,8 @@ Your moments are remembered between sessions and shared by **every clip in the q
 change them. Tick **All videos in the queue** to convert the same moments of each video in one go — handy for
 episodes of a series or several cuts of the same film. Moments that start after a video ends are skipped.
 
+💡 Thanks to **[u/pagineinternet](https://www.reddit.com/user/pagineinternet/)** on Reddit for the idea behind Moments preview!
+
 ## 🆕 Apple Depth Pro 2
 
 [Depth Pro 2](https://huggingface.co/apple/DepthPro2) is Apple's newest depth model, and Stereo3D Studio 1.1 is
@@ -253,6 +255,7 @@ None of this would exist without it. Thank you!
 
 - Created by **Drew Medina** — [drewmedina.com](https://drewmedina.com)
 - Made with **Claude Opus 5.5**
+- Moments preview idea: **[u/pagineinternet](https://www.reddit.com/user/pagineinternet/)** — thank you!
 - 3D engine: **iw3 / nunif** by [nagadomi](https://github.com/nagadomi/nunif) (MIT License)
 - Depth models by their respective authors (Depth Anything, Video Depth Anything, Distill Any Depth, Depth Pro,
   ZoeDepth) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
