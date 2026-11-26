@@ -10,6 +10,10 @@ import torch
 
 from iw3 import models  # noqa: F401  (registers model classes)
 from . import depthpro2  # noqa: F401  (registers Apple Depth Pro 2)
+try:
+    from . import lotus  # noqa: F401  (registers Lotus depth; needs diffusers)
+except ImportError as _e:   # older installs without diffusers simply don't list Lotus
+    print("Lotus depth unavailable:", _e)
 from iw3.utils import create_parser, set_state_args, iw3_main, is_video, is_image
 from iw3.depth_model_factory import get_all_depth_models, is_depth_aa_supported
 from nunif.utils.video import VIDEO_EXTENSIONS, has_nvenc

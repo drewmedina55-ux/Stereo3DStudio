@@ -34,6 +34,7 @@ DEPTH_MODEL_LABELS = {
     "VDA_Stream_L": "Video Depth Anything Stream · Large",
     "DepthPro": "Apple Depth Pro",
     "DepthPro_S": "Apple Depth Pro · Small",
+    "Lotus_D": "Lotus Depth (sharpest detail, images)",
     "DepthPro2_S": "Apple Depth Pro 2 · Small (fast, stable video)",
     "DepthPro2_B": "Apple Depth Pro 2 · Base (stable video)",
     "DepthPro2_L": "Apple Depth Pro 2 · Large (sharp, stable video)",
@@ -58,7 +59,7 @@ DEPTH_MODEL_LABELS = {
 # Models listed first, in this order
 DEPTH_MODEL_ORDER = [
     "Any_V2_S", "Any_V2_B", "Any_V2_L", "Distill_Any_S", "Distill_Any_B", "Distill_Any_L",
-    "Any_V3_Mono", "VDA_S", "VDA_B", "VDA_L", "DepthPro2_S", "DepthPro2_B", "DepthPro2_L",
+    "Any_V3_Mono", "VDA_S", "VDA_B", "VDA_L", "Lotus_D", "DepthPro2_S", "DepthPro2_B", "DepthPro2_L",
     "DepthPro2_H", "DepthPro", "ZoeD_Any_N", "ZoeD_Any_K",
 ]
 
@@ -90,7 +91,8 @@ DEFAULTS = {
     "resolution": 0,                # model default (higher multiplies VRAM + time)
     "method": "mlbw_l2_inpaint",    # fills revealed gaps - cleanest edges
     "max_height": 1080,
-    "pad_16x9": True,               # 4:3 videos get side bars so SBS / top-bottom frames are 16:9             # process videos at up to this height (0 = source size)
+    "pad_16x9": True,
+    "auto_image_preset": True,      # images added -> switch to the Lotus image preset (videos -> switch back)               # 4:3 videos get side bars so SBS / top-bottom frames are 16:9             # process videos at up to this height (0 = source size)
     "divergence": 2.2,
     "convergence": 0.45,
     "foreground_scale": 0.0,
@@ -155,6 +157,9 @@ BUILTIN_PRESETS = {
                                                       "enc_preset": "p6"},
     "Video · least flicker": {"depth_model": "VDA_L", "method": "mlbw_l2", "batch_size": 4, "edge_dilation": 1},
     "VR headset · VR180": {"layout": "VR180 (headsets)", "edge_dilation": 1},
+    "Images · Lotus (sharp detail)": {"layout": "Half SBS (Odyssey 3D / 3D TVs)", "depth_model": "Lotus_D",
+                                      "resolution": 1036, "tta": True, "edge_dilation": 1,
+                                      "method": "mlbw_l2_inpaint", "batch_size": 1},
     "Photos · Pop-out": {"foreground_scale": 1.0,
                          "edge_dilation": 1, "tta": True},
     "Anaglyph glasses": {"layout": "Anaglyph (red/cyan glasses)", "edge_dilation": 1},

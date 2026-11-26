@@ -46,9 +46,11 @@ Source footage: [Women Holding Lighted Candles](https://www.pexels.com/video/wom
 - **Drag & drop queue** for videos, images and whole folders, with thumbnails; finished items leave the queue.
 - **Odyssey 3D presets** — Half SBS output, Depth Anything V2 Large, MLBW + inpaint stereo, tuned for 16 GB GPUs.
 - **Every 3D format**: Half / Full SBS, top-bottom, VR180, cross-eyed, anaglyph, RGB + depth — see [3D output modes](#3d-output-modes).
+- **🆕 Lotus depth for images** — diffusion-based depth with very fine, crisp detail for photos. Adding images
+  switches to the **Images · Lotus (sharp detail)** preset automatically (videos switch back).
 - **🆕 Apple Depth Pro 2** — Apple's newest depth model: sharp edges and flicker-free depth for video, in four
   sizes. See [Apple Depth Pro 2](#-apple-depth-pro-2).
-- **Many depth models**: Depth Pro 2, Depth Anything V2 / V3, Video Depth Anything, Distill Any Depth, Depth Pro,
+- **Many depth models**: Lotus, Depth Pro 2, Depth Anything V2 / V3, Video Depth Anything, Distill Any Depth, Depth Pro,
   ZoeDepth — non-commercial models are downloaded from their official pages after you accept the license.
 - **GPU everywhere**: CUDA depth + stereo, NVENC encoding, NVDEC decoding, FP16; recovers automatically
   from out-of-memory errors.

@@ -7,7 +7,7 @@ $ProgressPreference = "SilentlyContinue"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $Root = Split-Path -Parent $PSScriptRoot
-$Version = "1.1"
+$Version = "1.2"
 $Runtime = Join-Path $Root "runtime"
 $Tools = Join-Path $PSScriptRoot "tools"
 $LogFile = Join-Path $Root "install_log.txt"
@@ -136,7 +136,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Step "Installing the 3D engine and interface packages"
 $req = Join-Path $Root "engine\requirements.txt"
-& $uv pip install --python $py -r $req "PySide6>=6.7,<6.13"
+& $uv pip install --python $py -r $req "PySide6>=6.7,<6.13" "diffusers>=0.30"
 if ($LASTEXITCODE -ne 0) { Fail "Package install failed." }
 # let the runtime find the app + engine without any environment variables
 $site = Join-Path $Runtime "Lib\site-packages"

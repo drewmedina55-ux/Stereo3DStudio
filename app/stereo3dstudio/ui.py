@@ -314,6 +314,9 @@ def progress_color(frac):
     return ORANGE if frac >= 0.5 else RED
 
 
+IMAGE_PRESET = "Images · Lotus (sharp detail)"
+
+
 def _fmt_t(t):
     t = max(0.0, float(t))
     h, m, sec = int(t // 3600), int(t % 3600 // 60), t % 60
@@ -1681,7 +1684,10 @@ class MainWindow(QMainWindow):
         self.cb_imgfmt.addItems(["png", "jpeg", "webp"])
         self.ck_recursive = QCheckBox("Include sub-folders when a folder is queued")
         self.ck_meta = QCheckBox("Put settings in output file names")
-        for c in (self.ck_recursive, self.ck_meta):
+        self.ck_auto_img = QCheckBox("Images added → switch to the Lotus image preset (videos switch back)")
+        self.ck_auto_img.setToolTip(f"Adding images loads “{IMAGE_PRESET}”. Adding videos afterwards restores "
+                                    "the settings you had before.")
+        for c in (self.ck_recursive, self.ck_meta, self.ck_auto_img):
             g.addWidget(c, g.rowCount(), 1)
         note = QLabel("Half SBS files are saved as <i>name_HSBS.mp4</i>, Full SBS as <i>name_LRF_Full_SBS.mp4</i>.")
         note.setWordWrap(True)
@@ -1895,6 +1901,7 @@ class MainWindow(QMainWindow):
         self.ck_lowvram.setChecked(s["low_vram"])
         self.ck_stream.setChecked(s["cuda_stream"])
         self.ck_recursive.setChecked(s["recursive"])
+        self.ck_auto_img.setChecked(bool(s.get("auto_image_preset", True)))
         self.ck_meta.setChecked(s["metadata_in_name"])
         self.ck_open_done.setChecked(bool(s.get("open_when_done", True)))
         self._apply_title(s)
@@ -1953,6 +1960,7 @@ class MainWindow(QMainWindow):
             "cuda_stream": self.ck_stream.isChecked(),
             "output_dir": self.ed_out.text().strip(),
             "recursive": self.ck_recursive.isChecked(),
+            "auto_image_preset": self.ck_auto_img.isChecked(),
             "resume": False,
             "metadata_in_name": self.ck_meta.isChecked(),
             "open_when_done": self.ck_open_done.isChecked(),
@@ -2019,6 +2027,30 @@ class MainWindow(QMainWindow):
             self._set_combo_data(self.cb_preset, select)
         self.cb_preset.blockSignals(False)
 
+    def _auto_image_preset(self, added):
+        """Images added -> Lotus image preset; videos added later -> back to the settings from before."""
+        if not self.ck_auto_img.isChecked() or self.converter.running():
+            return
+        saved = getattr(self, "_pre_image_settings", None)
+        if added == {"Image"} and saved is None:
+            if "Lotus_D" not in E.depth_models():
+                return
+            self._pre_image_settings = self.collect()
+            self._set_combo_data(self.cb_preset, IMAGE_PRESET)     # loads it via _on_preset
+            if self.cb_preset.currentData() == IMAGE_PRESET and self.cb_model.currentData() != "Lotus_D":
+                self._on_preset(0)
+            self.append_log(f"Images added — switched to “{IMAGE_PRESET}”.")
+        elif "Video" in added and saved is not None:
+            self._pre_image_settings = None
+            keep = {k: v for k, v in self.collect().items()
+                    if k.startswith("title_") or k in ("reel_moments", "output_dir", "auto_image_preset")}
+            saved.update(keep)
+            self.cb_preset.blockSignals(True)
+            self.cb_preset.setCurrentIndex(0)
+            self.cb_preset.blockSignals(False)
+            self._apply(saved)
+            self.append_log("Videos added — switched back to your video settings.")
+
     def _on_preset(self, _i):
         name = self.cb_preset.currentData()
         if not name:
@@ -2028,6 +2060,7 @@ class MainWindow(QMainWindow):
             s["output_dir"] = self.ed_out.text().strip()
             s.update(self._title_settings())          # presets never change the title
             s["reel_moments"] = self.timeline.get_moments()   # ... or your moments
+            s["auto_image_preset"] = self.ck_auto_img.isChecked()
             self._apply(s)
             self.append_log(f"Preset loaded: {name}")
         except Exception as e:
@@ -2090,6 +2123,7 @@ class MainWindow(QMainWindow):
     def add_paths(self, paths):
         existing = {it["path"] for it in self.items}
         skipped = 0
+        added = set()
         for p in paths:
             p = path.normpath(p)
             kind = E.classify(p)
@@ -2101,6 +2135,7 @@ class MainWindow(QMainWindow):
             if p in existing:
                 continue
             existing.add(p)
+            added.add(kind)
             self.items.append({"id": self._next_id, "path": p, "type": kind})
             self._next_id += 1
             r = self.table.rowCount()
@@ -2115,6 +2150,7 @@ class MainWindow(QMainWindow):
             self._request_thumb(self.items[-1])
         if skipped:
             self.append_log(f"Skipped {skipped} unsupported file(s).")
+        self._auto_image_preset(added)
         if self.items and not self.table.selectedItems():
             self.table.selectRow(0)
         self._update_buttons()

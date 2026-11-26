@@ -75,6 +75,9 @@ USING IT
       are not drawn in these two modes.
 
 TIPS
+  - Images: adding pictures switches to the "Images · Lotus (sharp
+    detail)" preset (Lotus depth, very fine detail); adding videos
+    switches back. The first Lotus run downloads about 3.8 GB.
   - Moments preview (under the Reel): double-click the timeline to add
     your own moments, then convert just those. They stay the same, so
     you can rerun them with another model or settings and compare.

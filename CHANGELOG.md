@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2
+- **Lotus depth** (lotus-depth-d-v2-0-disparity, the model behind kijai's ComfyUI-Lotus): very fine, crisp depth
+  for photos and stills. Downloads automatically on first use (about 3.8 GB, Apache-2.0).
+- New preset **Images · Lotus (sharp detail)**: Lotus at depth resolution 1036, flip TTA, edge fix 1,
+  MLBW L2 + inpaint, Half SBS.
+- Adding images switches to that preset automatically; adding videos afterwards switches back to your previous
+  settings. Turn it off in Settings → Files.
+
 ## 1.1
 - **Apple Depth Pro 2** depth models: Small, Base, Large and Huge+. Sharp edges and temporally stable depth
   for video — each frame also looks at the 16 frames before it, so the depth doesn't flicker. Download them in
