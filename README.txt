@@ -81,7 +81,10 @@ USING IT
 TIPS
   - Images: adding pictures switches to the "Images · Lotus (sharp
     detail)" preset (Lotus depth, very fine detail); adding videos
-    switches back. The first Lotus run downloads about 3.8 GB.
+    switches back. Lotus also works well for video, just slower. The
+    first Lotus run downloads about 3.8 GB.
+  - Depth maps: choose the "Depth map only" layout to save just the depth
+    map of any image or video.
   - Lotus-2 (experimental, images only): Models > Set up Lotus-2. Needs
     a Hugging Face token with the FLUX.1-dev license accepted; about
     34 GB download, 7 GB kept. Minutes per image on a 16 GB GPU.

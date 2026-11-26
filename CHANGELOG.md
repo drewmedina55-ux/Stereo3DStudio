@@ -2,7 +2,8 @@
 
 ## 1.2
 - **Lotus depth** (lotus-depth-d-v2-0-disparity, the model behind kijai's ComfyUI-Lotus): very fine, crisp depth
-  for photos and stills. Downloads automatically on first use (about 3.8 GB, Apache-2.0).
+  for photos and stills, and it works well for video too (slower). Downloads automatically on first use
+  (about 3.8 GB, Apache-2.0).
 - New preset **Images · Lotus (sharp detail)**: Lotus at depth resolution 1036, flip TTA, edge fix 1,
   MLBW L2 + inpaint, Half SBS.
 - Adding images switches to that preset automatically; adding videos afterwards switches back to your previous

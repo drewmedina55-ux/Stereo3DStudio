@@ -5,7 +5,7 @@
 <h1 align="center">Stereo3D Studio</h1>
 
 <p align="center">
-  <b>2D → 3D image &amp; video converter for Windows, with NVIDIA GPU acceleration.</b><br>
+  <b>2D → 3D image &amp; video converter — and depth map creator — for Windows, with NVIDIA GPU acceleration.</b><br>
   Made for the Samsung Odyssey 3D, and works with 3D TVs, VR headsets and anaglyph glasses.
 </p>
 
@@ -16,6 +16,11 @@
 Stereo3D Studio is a desktop app built on [iw3](https://github.com/nagadomi/nunif/tree/master/iw3), nagadomi's
 2D-to-stereo engine. It estimates depth with modern AI depth models, builds a second eye for every frame, and encodes
 the result as side-by-side (SBS) 3D video — with a queue, presets, live preview and a one-click Windows installer.
+
+**New in 1.2 — a depth map creator, too.** Stereo3D Studio can now save just the depth map of any image or video, or
+split images into separate files (left + right eye, or colour + depth). With the new **Lotus** and **Lotus-2** models
+it makes some of the most detailed depth maps available — useful well beyond 3D video: for compositing, relighting,
+displacement and 3D printing reliefs, parallax photos, or any tool that takes a depth map.
 
 ## Samples: 2D → 3D
 
@@ -46,8 +51,11 @@ Source footage: [Women Holding Lighted Candles](https://www.pexels.com/video/wom
 - **Drag & drop queue** for videos, images and whole folders, with thumbnails; finished items leave the queue.
 - **Odyssey 3D presets** — Half SBS output, Depth Anything V2 Large, MLBW + inpaint stereo, tuned for 16 GB GPUs.
 - **Every 3D format**: Half / Full SBS, top-bottom, VR180, cross-eyed, anaglyph, RGB + depth — see [3D output modes](#3d-output-modes).
-- **🆕 Lotus depth for images** — diffusion-based depth with very fine, crisp detail for photos. Adding images
-  switches to the **Images · Lotus (sharp detail)** preset automatically (videos switch back).
+- **🆕 Depth map creator** — new **Depth map only** layout and two-file image saving (left + right, or colour + depth).
+  See [Depth maps & image files](#-depth-maps--image-files).
+- **🆕 Lotus depth** — diffusion-based depth with very fine, crisp detail. Made for images, and works well for video
+  too (just slower). Adding images switches to the **Images · Lotus (sharp detail)** preset automatically.
+  See [Lotus](#-lotus-depth).
 - **🧪 Lotus-2 (experimental)** — the FLUX-based successor to Lotus: the most detailed depth here, for images only.
   See [Lotus-2](#-lotus-2-experimental).
 - **🆕 Apple Depth Pro 2** — Apple's newest depth model: sharp edges and flicker-free depth for video, in four
@@ -115,13 +123,24 @@ colour). Watch it with red/cyan glasses on any screen.
 near = bright) on the right. For apps, holographic displays and tools that create their own 3D views from a depth
 map. Titles are not drawn in these modes, so the depth half stays clean.
 
-**Depth map only.** Just the greyscale depth map (near = bright), at the source size — for compositing,
-relighting, displacement or other 3D tools.
+**🆕 Depth map only.** Just the greyscale depth map (near = bright), at the source size — see below.
 
-**Images as two files.** Settings → Files → **Save images as** can split image results into two separate
-files instead: the left and right eye at full resolution (`name_L` / `name_R`), or the colour picture and its depth
-map (`name_RGB` / `name_DEPTH`). Images that aren't 16:9 (4:3, 3:2, portrait) get side bars in each eye in the
-side-by-side layouts, just like videos, so they line up on 16:9 3D screens.
+## 🆕 Depth maps & image files
+
+Stereo3D Studio 1.2 is also a **depth map creator and converter**: drop in photos, artwork, renders or videos and get
+clean depth maps out — no 3D screen needed.
+
+| Option | Where | Output | Good for |
+|---|---|---|---|
+| **Depth map only** (new layout) | Settings → 3D → Output layout | `name_DEPTH.png` / `name_DEPTH.mp4` — greyscale, near = bright, source size | Compositing, relighting, displacement maps, 3D-print reliefs, depth-based effects in DaVinci Resolve, After Effects, Blender… |
+| **Two images: colour + depth map** | Settings → Files → Save images as | `name_RGB.png` + `name_DEPTH.png` | Tools that take a picture and its depth map side by side (parallax photos, Looking Glass and similar displays) |
+| **Two images: left eye + right eye** | Settings → Files → Save images as | `name_L.png` + `name_R.png`, full resolution | Stereo photo viewers, print and web stereo, editing each eye separately |
+| **One 3D image** (default) | Settings → Files → Save images as | `name_HSBS.png` etc., in the output layout | Viewing on the Odyssey 3D, 3D TVs, VR |
+
+- The image options apply to pictures; videos always use the output layout (including **Depth map only**).
+- Images that aren't 16:9 (4:3, 3:2, portrait) now get side bars in each eye in the side-by-side layouts, just like
+  videos, so they line up on 16:9 3D screens.
+- For the most detailed maps of photos use **Lotus** — or **Lotus-2** for the very best stills.
 
 ## ⭐ Conversion preview reel
 
@@ -193,16 +212,34 @@ built to use it for 3D conversion.
 > license yourself. Apple's Depth Pro 2 code is bundled unmodified in `thirdparty/depth_pro_2` under Apple's license
 > (see `thirdparty/depth_pro_2_licenses`).
 
+## 🆕 Lotus depth
+
+[**Lotus**](https://github.com/EnVision-Research/Lotus) ([paper](https://arxiv.org/abs/2409.18124)) by
+EnVision-Research (HKUST) is a *diffusion-based* depth model: a Stable Diffusion 2 network re-trained to predict
+depth in a single step. It's the same model kijai's [ComfyUI-Lotus](https://github.com/kijai/ComfyUI-Lotus) runs,
+and it's known for very fine, crisp detail — hair, foliage, small objects and clean edges.
+
+- **Model:** [`lotus-depth-d-v2-0-disparity`](https://huggingface.co/jingheya/lotus-depth-d-v2-0-disparity) — the
+  deterministic ("regression") version, trained in disparity space, so the same picture always gives the same depth.
+  Apache-2.0.
+- **Primarily for images.** The **Images · Lotus (sharp detail)** preset — Lotus at depth resolution 1036, flip TTA,
+  edge fix 1, MLBW L2 + inpaint, Half SBS — loads automatically when you add images, and your previous settings come
+  back when you add videos (Settings → Files to turn this off).
+- **Works well for video too — just slower.** Choose Lotus under Depth model for any clip; each frame is processed on
+  its own, so it's slower than the video-tuned models. For long films, Depth Anything V2 or Depth Pro 2 are faster.
+- **Download:** automatic on first use (about 3.8 GB) with progress in the queue and the log — no license prompt.
+
 ## 🧪 Lotus-2 (experimental)
 
-[Lotus-2](https://github.com/EnVision-Research/Lotus-2) is the successor to Lotus and gives the most detailed depth
+[**Lotus-2**](https://github.com/EnVision-Research/Lotus-2) ([paper](https://arxiv.org/abs/2512.01030) ·
+[project page](https://lotus-2.github.io/) · [weights](https://huggingface.co/jingheya/Lotus-2)) is the successor to Lotus and gives the most detailed depth
 of any model in Stereo3D Studio — fine hair, thin objects, even paintings and glass. It's built on Black Forest Labs'
 **FLUX.1-dev** (12 billion parameters), which the authors run on 40 GB+ GPUs, so in Stereo3D Studio it is
 **experimental and for images only**:
 
 - **Fits 16 GB GPUs** — during setup the FLUX transformer is converted to 4-bit (NF4), and the empty-prompt text
   embeddings Lotus-2 needs are computed once, so the 9.5 GB T5 text encoder is never loaded again.
-- **Slow** — expect minutes per image. Videos in the queue are skipped.
+- **Images only** — expect minutes per image; videos in the queue are skipped (use Lotus for video instead).
 - **One-time setup** (Models → **Set up Lotus-2 (experimental)…**):
   1. Sign in to Hugging Face, open [FLUX.1-dev](https://huggingface.co/black-forest-labs/FLUX.1-dev) and accept the
      **FLUX.1 [dev] Non-Commercial License**.
@@ -292,8 +329,9 @@ None of this would exist without it. Thank you!
 - Made with **Claude Opus 5.5**
 - Moments preview idea: **[u/pagineinternet](https://www.reddit.com/user/pagineinternet/)** — thank you!
 - 3D engine: **iw3 / nunif** by [nagadomi](https://github.com/nagadomi/nunif) (MIT License)
-- Depth models by their respective authors (Depth Anything, Video Depth Anything, Distill Any Depth, Depth Pro,
-  ZoeDepth) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+- Depth models by their respective authors (Lotus and Lotus-2 by EnVision-Research, Apple Depth Pro 2, Depth
+  Anything, Video Depth Anything, Distill Any Depth, Depth Pro, ZoeDepth) — see
+  [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
 ## License
 
