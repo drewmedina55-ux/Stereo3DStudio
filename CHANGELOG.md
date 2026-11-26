@@ -7,6 +7,10 @@
   MLBW L2 + inpaint, Half SBS.
 - Adding images switches to that preset automatically; adding videos afterwards switches back to your previous
   settings. Turn it off in Settings → Files.
+- **Lotus-2 (experimental, images only):** the FLUX.1-dev-based successor to Lotus, for the most detailed depth.
+  One-time guided setup in Models → “Set up Lotus-2 (experimental)…”: needs a Hugging Face token with the
+  FLUX.1-dev license accepted; downloads ~34 GB, converts the model to 4-bit so it fits 16 GB GPUs, then keeps
+  about 7 GB. Minutes per image.
 - Lotus download shows its progress (queue status and log) the first time it's used.
 - New output layout **Depth map only** — just the greyscale depth map, for images and videos (`name_DEPTH`).
 - New **Save images as** option (Settings → Files): one 3D image, two images (left + right eye, `name_L` /

@@ -42,6 +42,7 @@ DEPTH_MODEL_LABELS = {
     "DepthPro": "Apple Depth Pro",
     "DepthPro_S": "Apple Depth Pro · Small",
     "Lotus_D": "Lotus Depth (sharpest detail, images)",
+    "Lotus2_D": "Lotus-2 (experimental · images only · very slow)",
     "DepthPro2_S": "Apple Depth Pro 2 · Small (fast, stable video)",
     "DepthPro2_B": "Apple Depth Pro 2 · Base (stable video)",
     "DepthPro2_L": "Apple Depth Pro 2 · Large (sharp, stable video)",
@@ -66,7 +67,7 @@ DEPTH_MODEL_LABELS = {
 # Models listed first, in this order
 DEPTH_MODEL_ORDER = [
     "Any_V2_S", "Any_V2_B", "Any_V2_L", "Distill_Any_S", "Distill_Any_B", "Distill_Any_L",
-    "Any_V3_Mono", "VDA_S", "VDA_B", "VDA_L", "Lotus_D", "DepthPro2_S", "DepthPro2_B", "DepthPro2_L",
+    "Any_V3_Mono", "VDA_S", "VDA_B", "VDA_L", "Lotus_D", "Lotus2_D", "DepthPro2_S", "DepthPro2_B", "DepthPro2_L",
     "DepthPro2_H", "DepthPro", "ZoeD_Any_N", "ZoeD_Any_K",
 ]
 

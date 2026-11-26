@@ -136,7 +136,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Step "Installing the 3D engine and interface packages"
 $req = Join-Path $Root "engine\requirements.txt"
-& $uv pip install --python $py -r $req "PySide6>=6.7,<6.13" "diffusers>=0.30"
+& $uv pip install --python $py -r $req "PySide6>=6.7,<6.13" "diffusers>=0.32" "peft>=0.14" "transformers>=4.46" "sentencepiece" "protobuf" "bitsandbytes>=0.45"
 if ($LASTEXITCODE -ne 0) { Fail "Package install failed." }
 # let the runtime find the app + engine without any environment variables
 $site = Join-Path $Runtime "Lib\site-packages"

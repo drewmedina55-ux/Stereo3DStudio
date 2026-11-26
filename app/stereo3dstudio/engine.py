@@ -14,6 +14,11 @@ try:
     from . import lotus  # noqa: F401  (registers Lotus depth; needs diffusers)
 except ImportError as _e:   # older installs without diffusers simply don't list Lotus
     print("Lotus depth unavailable:", _e)
+try:
+    import peft  # noqa: F401
+    from . import lotus2  # noqa: F401  (registers experimental Lotus-2; needs diffusers + peft)
+except ImportError as _e:
+    print("Lotus-2 unavailable:", _e)
 from iw3.utils import create_parser, set_state_args, iw3_main, is_video, is_image
 from iw3.depth_model_factory import get_all_depth_models, is_depth_aa_supported
 from nunif.utils.video import VIDEO_EXTENSIONS, has_nvenc
@@ -565,6 +570,9 @@ class Converter:
                     if not self._depth_model.loaded():
                         self.on_log(f"Loading depth model {args.depth_model} (first run downloads it)…")
                     self._download_lotus_if_needed(index, args.depth_model)
+                    if args.depth_model == "Lotus2_D" and classify(input_path) == "Video":
+                        raise RuntimeError("Lotus-2 is for images only (far too slow for video) — skipped. "
+                                           "Use Lotus or Depth Pro 2 for videos.")
                     self.on_log(f"▶ {path.basename(input_path)}")
                     self._convert_with_recovery(settings, input_path, output_dir, args)
                     if not self.stop_event.is_set() and classify(input_path) in ("Image", "Folder"):

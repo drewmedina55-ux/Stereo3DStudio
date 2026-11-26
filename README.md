@@ -48,6 +48,8 @@ Source footage: [Women Holding Lighted Candles](https://www.pexels.com/video/wom
 - **Every 3D format**: Half / Full SBS, top-bottom, VR180, cross-eyed, anaglyph, RGB + depth — see [3D output modes](#3d-output-modes).
 - **🆕 Lotus depth for images** — diffusion-based depth with very fine, crisp detail for photos. Adding images
   switches to the **Images · Lotus (sharp detail)** preset automatically (videos switch back).
+- **🧪 Lotus-2 (experimental)** — the FLUX-based successor to Lotus: the most detailed depth here, for images only.
+  See [Lotus-2](#-lotus-2-experimental).
 - **🆕 Apple Depth Pro 2** — Apple's newest depth model: sharp edges and flicker-free depth for video, in four
   sizes. See [Apple Depth Pro 2](#-apple-depth-pro-2).
 - **Many depth models**: Lotus, Depth Pro 2, Depth Anything V2 / V3, Video Depth Anything, Distill Any Depth, Depth Pro,
@@ -190,6 +192,28 @@ built to use it for 3D conversion.
 > only, non-commercial**. They are not included with Stereo3D Studio; you download them from Apple and accept that
 > license yourself. Apple's Depth Pro 2 code is bundled unmodified in `thirdparty/depth_pro_2` under Apple's license
 > (see `thirdparty/depth_pro_2_licenses`).
+
+## 🧪 Lotus-2 (experimental)
+
+[Lotus-2](https://github.com/EnVision-Research/Lotus-2) is the successor to Lotus and gives the most detailed depth
+of any model in Stereo3D Studio — fine hair, thin objects, even paintings and glass. It's built on Black Forest Labs'
+**FLUX.1-dev** (12 billion parameters), which the authors run on 40 GB+ GPUs, so in Stereo3D Studio it is
+**experimental and for images only**:
+
+- **Fits 16 GB GPUs** — during setup the FLUX transformer is converted to 4-bit (NF4), and the empty-prompt text
+  embeddings Lotus-2 needs are computed once, so the 9.5 GB T5 text encoder is never loaded again.
+- **Slow** — expect minutes per image. Videos in the queue are skipped.
+- **One-time setup** (Models → **Set up Lotus-2 (experimental)…**):
+  1. Sign in to Hugging Face, open [FLUX.1-dev](https://huggingface.co/black-forest-labs/FLUX.1-dev) and accept the
+     **FLUX.1 [dev] Non-Commercial License**.
+  2. Create a **Read** token at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) and paste it
+     into the setup window (used for the download only, not saved).
+  3. Start setup: it downloads about 34 GB (needs ~35 GB free while it runs), converts to 4-bit and deletes the rest —
+     about 7 GB stays in your `models` folder.
+- Then choose **Lotus-2** under Depth model.
+
+> **License:** Lotus-2's weights are Apache-2.0. FLUX.1-dev is under the FLUX.1 [dev] Non-Commercial License, which you
+> accept yourself on Hugging Face. Nothing from FLUX is included with Stereo3D Studio.
 
 ## Requirements
 

@@ -941,6 +941,110 @@ class LiveViewWindow(QDialog):
         super().reject()
 
 
+class Lotus2SetupDialog(QDialog):
+    """One-time setup for the experimental Lotus-2 model (gated FLUX.1-dev download + 4-bit conversion)."""
+    _prog = Signal(float, str)
+    _fin = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        from . import lotus2 as L2
+        self.L2 = L2
+        self.setWindowTitle("Set up Lotus-2 (experimental)")
+        self.setMinimumWidth(620)
+        self.cancel = threading.Event()
+        self.thread = None
+        lay = QVBoxLayout(self)
+        lay.setSpacing(10)
+        intro = QLabel(
+            "<b>Lotus-2</b> gives the most detailed depth of any model here, but it is <b>experimental</b>: "
+            "it is built on FLUX.1-dev (12 billion parameters), so it is <b>for images only</b> and takes "
+            "minutes per picture on a 16 GB GPU.<br><br>"
+            "<b>One-time setup</b><ol style='margin-left:-20px'>"
+            f"<li>Sign in to Hugging Face and open the <a style='color:{ACCENT}' href='{L2.FLUX_PAGE}'>FLUX.1-dev page</a>. "
+            "Accept the <b>FLUX.1 [dev] Non-Commercial License</b> there.</li>"
+            f"<li>Create a <b>Read</b> token on <a style='color:{ACCENT}' href='{L2.TOKEN_PAGE}'>your token page</a> and paste it below. "
+            "It is used for this download only and is not saved.</li>"
+            "<li>Click <b>Start setup</b>. It downloads about 34 GB (needs about 35 GB free while it runs), "
+            "converts the model to 4-bit, then deletes what it no longer needs — about <b>7 GB</b> stays in "
+            "your models folder.</li></ol>"
+            "Lotus-2's own weights are Apache-2.0; FLUX.1-dev stays under Black Forest Labs' non-commercial license.")
+        intro.setWordWrap(True)
+        intro.setOpenExternalLinks(True)
+        intro.setTextFormat(Qt.RichText)
+        lay.addWidget(intro)
+        self.ed_token = QLineEdit()
+        self.ed_token.setPlaceholderText("Hugging Face token (hf_…)")
+        self.ed_token.setEchoMode(QLineEdit.Password)
+        lay.addWidget(self.ed_token)
+        self.pb = QProgressBar()
+        self.pb.setRange(0, 1000)
+        self.pb.setValue(0)
+        self.lbl = QLabel("Ready." if not L2.is_ready() else "Lotus-2 is already set up.")
+        self.lbl.setWordWrap(True)
+        self.lbl.setObjectName("muted")
+        lay.addWidget(self.pb)
+        lay.addWidget(self.lbl)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        self.b_stop = QPushButton("Stop")
+        self.b_start = QPushButton("Start setup")
+        self.b_start.setObjectName("primary")
+        self.b_close = QPushButton("Close")
+        for b in (self.b_stop, self.b_start, self.b_close):
+            row.addWidget(b)
+        lay.addLayout(row)
+        self.b_start.clicked.connect(self._start)
+        self.b_stop.clicked.connect(self.cancel.set)
+        self.b_close.clicked.connect(self.reject)
+        self._prog.connect(self._on_prog)
+        self._fin.connect(self._on_fin)
+        self._sync()
+
+    def _sync(self):
+        busy = self.thread is not None and self.thread.is_alive()
+        self.b_start.setEnabled(not busy and not self.L2.is_ready())
+        self.b_stop.setEnabled(busy)
+        self.ed_token.setEnabled(not busy)
+        self.b_close.setText("Close" if not busy else "Hide")
+
+    def _start(self):
+        self.cancel.clear()
+        token = self.ed_token.text()
+
+        def work():
+            try:
+                self.L2.setup(token, progress=lambda f, t: self._prog.emit(f, t), cancel=self.cancel,
+                              log=lambda m: self._prog.emit(-1.0, m))
+                self._fin.emit("")
+            except Exception as e:  # noqa
+                self._fin.emit(str(e))
+        self.thread = threading.Thread(target=work, daemon=True)
+        self.thread.start()
+        self._sync()
+
+    def _on_prog(self, frac, text):
+        if frac >= 0:
+            self.pb.setValue(int(frac * 1000))
+        self.lbl.setText(text)
+        if self.parent() is not None and hasattr(self.parent(), "append_log"):
+            if frac < 0:
+                self.parent().append_log("Lotus-2: " + text)
+
+    def _on_fin(self, err):
+        self.thread = None
+        if err:
+            self.lbl.setText("✖ " + err)
+            if self.parent() is not None and hasattr(self.parent(), "append_log"):
+                self.parent().append_log("Lotus-2 setup: " + err)
+        else:
+            self.pb.setValue(1000)
+            self.lbl.setText("✔ Lotus-2 is ready. Choose it under Depth model (images only).")
+        self._sync()
+        if self.parent() is not None and hasattr(self.parent(), "_fill_models"):
+            self.parent()._fill_models()
+
+
 class ModelManagerDialog(QDialog):
     """Download / import depth models that need a license acceptance."""
     _prog = Signal(int, int)
@@ -1003,7 +1107,10 @@ class ModelManagerDialog(QDialog):
         self.b_dl.clicked.connect(self._download)
         self.b_cancel.clicked.connect(self.cancel.set)
         self.b_close.clicked.connect(self.accept)
-        for b in (self.b_page, self.b_import, self.b_folder):
+        self.b_lotus2 = QPushButton("Set up Lotus-2 (experimental)…")
+        self.b_lotus2.setToolTip("FLUX-based Lotus-2: the most detailed depth, images only, needs a Hugging Face token")
+        self.b_lotus2.clicked.connect(lambda: Lotus2SetupDialog(self.parent() or self).exec())
+        for b in (self.b_page, self.b_import, self.b_folder, self.b_lotus2):
             row.addWidget(b)
         row.addStretch(1)
         for b in (self.b_cancel, self.b_dl, self.b_close):
@@ -1990,6 +2097,13 @@ class MainWindow(QMainWindow):
             label = S.DEPTH_MODEL_LABELS.get(m, m)
             if not M.is_ready(m):
                 label += "   ⬇ needs download"
+            elif m == "Lotus2_D":
+                try:
+                    from . import lotus2 as _L2
+                    if not _L2.is_ready():
+                        label += "   ⚙ needs one-time setup"
+                except Exception:
+                    pass
             elif m == "Lotus_D":
                 try:
                     from . import lotus as _L
@@ -2009,6 +2123,17 @@ class MainWindow(QMainWindow):
     def _ensure_model(self, s):
         """Make sure the selected depth model is available; offer the model manager if not."""
         m = s["depth_model"]
+        if m == "Lotus2_D":
+            from . import lotus2 as _L2
+            if not _L2.is_ready():
+                Lotus2SetupDialog(self).exec()
+            if not _L2.is_ready():
+                return False
+            if any(it["type"] == "Video" for it in self.items) and \
+                    QMessageBox.question(self, APP_NAME, "Lotus-2 is for images only — videos in the queue will be "
+                                         "skipped. Continue?") != QMessageBox.Yes:
+                return False
+            return True
         if M.is_ready(m):
             return True
         r = QMessageBox.question(

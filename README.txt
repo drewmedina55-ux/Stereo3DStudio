@@ -82,6 +82,9 @@ TIPS
   - Images: adding pictures switches to the "Images · Lotus (sharp
     detail)" preset (Lotus depth, very fine detail); adding videos
     switches back. The first Lotus run downloads about 3.8 GB.
+  - Lotus-2 (experimental, images only): Models > Set up Lotus-2. Needs
+    a Hugging Face token with the FLUX.1-dev license accepted; about
+    34 GB download, 7 GB kept. Minutes per image on a 16 GB GPU.
   - Moments preview (under the Reel): double-click the timeline to add
     your own moments, then convert just those. They stay the same, so
     you can rerun them with another model or settings and compare.
