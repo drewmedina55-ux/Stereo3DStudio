@@ -73,6 +73,10 @@ USING IT
       Picture on the left, grey depth map (near = bright) on the right,
       for apps and displays that make their own 3D from depth. Titles
       are not drawn in these two modes.
+  - Depth map only      *_DEPTH           1920x1080
+      Just the greyscale depth map (near = bright).
+  Images can also be saved as two files (Settings > Files > Save images
+  as): left + right eye (*_L / *_R) or colour + depth (*_RGB / *_DEPTH).
 
 TIPS
   - Images: adding pictures switches to the "Images · Lotus (sharp

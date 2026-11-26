@@ -85,6 +85,7 @@ output file name so players can recognise it. Sizes below are for a 1920×1080 s
 | Anaglyph | `_redcyan_dubois` | 1920×1080 | Red/cyan paper glasses on any normal screen |
 | RGB + Depth | `_RGBD` | 3840×1080 | Apps and displays that build 3D from a depth map |
 | Half RGB + Depth | `_HRGBD` | 1920×1080 | Same, squeezed to the source size |
+| Depth map only | `_DEPTH` | 1920×1080 | Just the greyscale depth map (near = bright) |
 
 **Half SBS (side-by-side).** Left eye on the left, right eye on the right, each squeezed to half width so the file
 keeps the source size. The display stretches each half back to full width in 3D mode. This is the format for the
@@ -111,6 +112,14 @@ colour). Watch it with red/cyan glasses on any screen.
 **RGB + Depth / Half RGB + Depth.** Not a stereo pair: the original picture on the left and its depth map (grey,
 near = bright) on the right. For apps, holographic displays and tools that create their own 3D views from a depth
 map. Titles are not drawn in these modes, so the depth half stays clean.
+
+**Depth map only.** Just the greyscale depth map (near = bright), at the source size — for compositing,
+relighting, displacement or other 3D tools.
+
+**Images as two files.** Settings → Files → **Save images as** can split image results into two separate
+files instead: the left and right eye at full resolution (`name_L` / `name_R`), or the colour picture and its depth
+map (`name_RGB` / `name_DEPTH`). Images that aren't 16:9 (4:3, 3:2, portrait) get side bars in each eye in the
+side-by-side layouts, just like videos, so they line up on 16:9 3D screens.
 
 ## ⭐ Conversion preview reel
 

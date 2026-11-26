@@ -59,7 +59,7 @@ class TitleOverlay:
     def create(cls, settings, video_path):
         if not settings.get("title_on") or not str(settings.get("title_text", "")).strip():
             return None
-        if settings.get("layout", "").startswith(("RGB + Depth", "Half RGB + Depth")):
+        if settings.get("layout", "").startswith(("RGB + Depth", "Half RGB + Depth", "Depth map only")):
             return None                                       # would corrupt the depth half
         fps, total = video_timing(video_path, settings)
         return cls(settings, fps, total)

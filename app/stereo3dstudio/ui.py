@@ -1682,9 +1682,15 @@ class MainWindow(QMainWindow):
         scroll, g = self._form()
         self.cb_imgfmt = self._row(g, "Image format", QComboBox())
         self.cb_imgfmt.addItems(["png", "jpeg", "webp"])
+        self.cb_imgout = self._row(g, "Save images as", QComboBox(),
+                                   "One 3D image in the output layout, or two separate files: the left and right eye "
+                                   "(full resolution, name_L / name_R), or the colour picture and its depth map "
+                                   "(name_RGB / name_DEPTH). Videos always use the output layout.")
+        for k, label in S.IMAGE_OUTPUTS.items():
+            self.cb_imgout.addItem(label, k)
         self.ck_recursive = QCheckBox("Include sub-folders when a folder is queued")
         self.ck_meta = QCheckBox("Put settings in output file names")
-        self.ck_auto_img = QCheckBox("Images added → switch to the Lotus image preset (videos switch back)")
+        self.ck_auto_img = QCheckBox("Images added → Lotus image preset (videos switch back)")
         self.ck_auto_img.setToolTip(f"Adding images loads “{IMAGE_PRESET}”. Adding videos afterwards restores "
                                     "the settings you had before.")
         for c in (self.ck_recursive, self.ck_meta, self.ck_auto_img):
@@ -1901,6 +1907,7 @@ class MainWindow(QMainWindow):
         self.ck_lowvram.setChecked(s["low_vram"])
         self.ck_stream.setChecked(s["cuda_stream"])
         self.ck_recursive.setChecked(s["recursive"])
+        self._set_combo_data(self.cb_imgout, s.get("image_output", "single"))
         self.ck_auto_img.setChecked(bool(s.get("auto_image_preset", True)))
         self.ck_meta.setChecked(s["metadata_in_name"])
         self.ck_open_done.setChecked(bool(s.get("open_when_done", True)))
@@ -1960,6 +1967,7 @@ class MainWindow(QMainWindow):
             "cuda_stream": self.ck_stream.isChecked(),
             "output_dir": self.ed_out.text().strip(),
             "recursive": self.ck_recursive.isChecked(),
+            "image_output": self.cb_imgout.currentData(),
             "auto_image_preset": self.ck_auto_img.isChecked(),
             "resume": False,
             "metadata_in_name": self.ck_meta.isChecked(),
@@ -1982,6 +1990,13 @@ class MainWindow(QMainWindow):
             label = S.DEPTH_MODEL_LABELS.get(m, m)
             if not M.is_ready(m):
                 label += "   ⬇ needs download"
+            elif m == "Lotus_D":
+                try:
+                    from . import lotus as _L
+                    if _L.missing_files():
+                        label += "   ⬇ downloads 3.8 GB on first use"
+                except Exception:
+                    pass
             self.cb_model.addItem(label, m)
         if cur:
             self._set_combo_data(self.cb_model, cur)
@@ -2533,6 +2548,7 @@ class MainWindow(QMainWindow):
             self._set_status(r, status, info)
 
     def on_done(self, stopped):
+        self._fill_models()                            # e.g. drop "downloads on first use" once Lotus is here
         if stopped:
             for item_id, *_ in getattr(self, "_pending", []):
                 self._set_status(self._row_of(item_id), "Ready", "")

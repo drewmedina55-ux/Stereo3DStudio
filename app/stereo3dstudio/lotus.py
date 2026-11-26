@@ -39,16 +39,47 @@ TIMESTEP = 999
 DEFAULT_LONG_SIDE = 768                 # Lotus's own default processing resolution
 
 
-def _fetch_missing(log=print):
+def missing_files():
+    return [n for n in FILES if not path.exists(path.join(MODEL_DIR, n))]
+
+
+def ensure_downloaded(progress=None, cancel=None):
+    """Download whatever is missing. progress(done_bytes, total_bytes, file_name); cancel: threading.Event.
+    Files are written as .part and renamed when complete, so a stopped download resumes cleanly next time."""
+    import requests
+    todo = missing_files()
+    if not todo:
+        return
     os.makedirs(MODEL_DIR, exist_ok=True)
-    for name, url in FILES.items():
+    sizes = {}
+    for name in todo:                                   # total size for one overall progress figure
+        try:
+            r = requests.head(FILES[name], allow_redirects=True, timeout=30)
+            sizes[name] = int(r.headers.get("content-length") or 0)
+        except Exception:
+            sizes[name] = 0
+    total, done = sum(sizes.values()), 0
+    for name in todo:
         dest = path.join(MODEL_DIR, name)
-        if path.exists(dest):
-            continue
-        log(f"Downloading Lotus: {name}…")
         tmp = dest + ".part"
-        torch.hub.download_url_to_file(url, tmp, progress=True)
+        with requests.get(FILES[name], stream=True, timeout=60, allow_redirects=True,
+                          headers={"User-Agent": "Stereo3DStudio"}) as r:
+            r.raise_for_status()
+            with open(tmp, "wb") as f:
+                for chunk in r.iter_content(chunk_size=4 * 1024 * 1024):
+                    if cancel is not None and cancel.is_set():
+                        f.close()
+                        os.remove(tmp)
+                        raise RuntimeError("Lotus download stopped")
+                    f.write(chunk)
+                    done += len(chunk)
+                    if progress:
+                        progress(done, total, name)
         os.replace(tmp, dest)
+
+
+def _fetch_missing():
+    ensure_downloaded()
 
 
 class LotusModel(BaseDepthModel):

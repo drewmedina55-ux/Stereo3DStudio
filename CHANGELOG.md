@@ -7,6 +7,13 @@
   MLBW L2 + inpaint, Half SBS.
 - Adding images switches to that preset automatically; adding videos afterwards switches back to your previous
   settings. Turn it off in Settings → Files.
+- Lotus download shows its progress (queue status and log) the first time it's used.
+- New output layout **Depth map only** — just the greyscale depth map, for images and videos (`name_DEPTH`).
+- New **Save images as** option (Settings → Files): one 3D image, two images (left + right eye, `name_L` /
+  `name_R`), or two images (colour + depth map, `name_RGB` / `name_DEPTH`).
+- Fixed: images that aren't 16:9 (4:3, 3:2, portrait) now get side bars in each eye like videos, so side-by-side 3D
+  lines up on the Odyssey 3D.
+- Cleaner load screen: no light gradient around the edges.
 
 ## 1.1
 - **Apple Depth Pro 2** depth models: Small, Base, Large and Huge+. Sharp edges and temporally stable depth

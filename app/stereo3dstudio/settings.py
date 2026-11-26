@@ -14,6 +14,13 @@ LAYOUTS = {
     "Anaglyph (red/cyan glasses)": {"anaglyph": "dubois"},
     "RGB + Depth": {"rgbd": True},
     "Half RGB + Depth": {"half_rgbd": True},
+    "Depth map only": {"rgbd": True},          # RGB + Depth, then only the depth half is kept
+}
+DEPTH_ONLY = "Depth map only"
+IMAGE_OUTPUTS = {                              # how images are saved
+    "single": "One 3D image (output layout)",
+    "lr": "Two images: left eye + right eye",
+    "rgb_depth": "Two images: colour + depth map",
 }
 
 # Friendly labels for depth models. Unknown models fall back to their raw name.
@@ -92,6 +99,7 @@ DEFAULTS = {
     "method": "mlbw_l2_inpaint",    # fills revealed gaps - cleanest edges
     "max_height": 1080,
     "pad_16x9": True,
+    "image_output": "single",       # images: one 3D file, or two files (left/right or colour/depth)
     "auto_image_preset": True,      # images added -> switch to the Lotus image preset (videos -> switch back)               # 4:3 videos get side bars so SBS / top-bottom frames are 16:9             # process videos at up to this height (0 = source size)
     "divergence": 2.2,
     "convergence": 0.45,

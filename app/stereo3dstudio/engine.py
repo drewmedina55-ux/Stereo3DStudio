@@ -19,7 +19,7 @@ from iw3.depth_model_factory import get_all_depth_models, is_depth_aa_supported
 from nunif.utils.video import VIDEO_EXTENSIONS, has_nvenc
 from nunif.utils.image_loader import IMG_EXTENSIONS
 
-from .settings import LAYOUTS, DEPTH_MODEL_ORDER
+from .settings import LAYOUTS, DEPTH_MODEL_ORDER, DEPTH_ONLY
 import iw3.utils as _iw3_utils
 
 # iw3 names Half SBS files "<name>_LR". Windows Media Player treats that tag specially and shows
@@ -124,8 +124,29 @@ def _nvdec_ok(info):
 _SPLIT_LAYOUTS = ("Half SBS", "Full SBS", "Half Top", "Full Top", "Cross")
 
 
+def _image_size(p):
+    """(width, height) of an image as displayed (EXIF rotation applied), or None."""
+    if not path.isfile(p) or classify(p) != "Image":
+        return None
+    try:
+        from PIL import Image, ImageOps
+        with Image.open(p) as im:
+            return ImageOps.exif_transpose(im).size
+    except Exception:
+        return None
+
+
+def effective_settings(s, input_path):
+    """Images saved as two files are rendered in a layout that splits cleanly into them."""
+    mode = s.get("image_output", "single")
+    if mode != "single" and classify(input_path) in ("Image", "Folder"):
+        s = dict(s, layout="Full SBS (VR players, double width)" if mode == "lr" else "RGB + Depth")
+    return s
+
+
 def build_args(s, input_path, output_dir, preview=False):
     """Translate Stereo3D Studio settings dict -> iw3 argparse Namespace (without state)."""
+    s = effective_settings(s, input_path)
     parser = create_parser(required_true=False)
     layout = dict(LAYOUTS.get(s["layout"], {}))
     flags = dict(half_sbs=False, tb=False, half_tb=False, vr180=False, cross_eyed=False,
@@ -171,6 +192,10 @@ def build_args(s, input_path, output_dir, preview=False):
         # 4:3 (or any picture narrower than 16:9): add black side bars to each eye so the frame is 16:9
         if s.get("pad_16x9", True) and s["layout"].startswith(_SPLIT_LAYOUTS) and src_w * sar / src_h < 16 / 9 - 0.02:
             pad_mode = "16:9"
+    img = _image_size(input_path)
+    if img and s.get("pad_16x9", True) and s.get("image_output", "single") == "single" \
+            and s["layout"].startswith(_SPLIT_LAYOUTS) and img[0] / img[1] < 16 / 9 - 0.02:
+        pad_mode = "16:9"        # same as video: a 4:3 / portrait photo needs side bars for SBS screens
 
     parser.set_defaults(
         input=input_path,
@@ -229,6 +254,8 @@ def _make_output_filename(input_filename, args, video=False):
     tag = f"_{args.depth_model}"
     if name.startswith(base) and tag not in name[len(base):]:
         name = base + tag + name[len(base):]
+    if _LIVE.get("depth_only"):
+        name = name.replace(_iw3_utils.RGBD_SUFFIX, "_DEPTH")
     # never overwrite an earlier output: add _01, _02, ... to the end
     out_dir = getattr(args, "output", None)
     if out_dir and not path.splitext(out_dir)[1] and path.exists(path.join(out_dir, name)):
@@ -305,7 +332,7 @@ def read_settings_from_video(p):
 import nunif.utils.video as _VU
 from types import GeneratorType as _Gen
 
-_LIVE = {"sink": None, "every": 100, "max_w": 1280, "title": None}   # sink(pil_image, frame_number) or None
+_LIVE = {"sink": None, "every": 100, "max_w": 1280, "title": None, "depth_only": False}   # sink(pil_image, frame_number) or None
 
 
 def _frame_to_pil(f, max_w=1280):
@@ -338,6 +365,17 @@ def _frame_to_pil(f, max_w=1280):
     return im
 
 
+def _right_half(f):
+    x = getattr(f, "planes", f)
+    if not torch.is_tensor(x):
+        return f
+    half = x[..., x.shape[-1] // 2:].contiguous()
+    if hasattr(f, "planes"):
+        f.planes = half
+        return f
+    return half
+
+
 class _TapCallback:
     """Wraps iw3's per-frame callback and hands every Nth finished stereo frame to the UI."""
 
@@ -348,9 +386,11 @@ class _TapCallback:
     def __call__(self, frame):
         out = self.inner(frame)
         sink, title = _LIVE["sink"], _LIVE["title"]
-        if (sink is None and title is None) or out is None:
+        if (sink is None and title is None and not _LIVE["depth_only"]) or out is None:
             return out
         frames = list(out) if isinstance(out, _Gen) else (list(out) if isinstance(out, (list, tuple)) else [out])
+        if _LIVE["depth_only"]:                      # "Depth map only": keep the depth half of RGB + Depth
+            frames = [_right_half(f) for f in frames]
         for i, f in enumerate(frames):
             if title is not None:                    # title overlay in both eyes
                 try:
@@ -524,8 +564,11 @@ class Converter:
                     args = self._prepare(settings, input_path, output_dir)
                     if not self._depth_model.loaded():
                         self.on_log(f"Loading depth model {args.depth_model} (first run downloads it)…")
+                    self._download_lotus_if_needed(index, args.depth_model)
                     self.on_log(f"▶ {path.basename(input_path)}")
                     self._convert_with_recovery(settings, input_path, output_dir, args)
+                    if not self.stop_event.is_set() and classify(input_path) in ("Image", "Folder"):
+                        self._finish_images(settings, input_path, output_dir, t0)
                     if self.stop_event.is_set():
                         self.on_item(index, "Stopped", "")
                         stopped = True
@@ -539,9 +582,82 @@ class Converter:
         finally:
             _LIVE["sink"] = None
             _LIVE["title"] = None
+            _LIVE["depth_only"] = False
             self.on_done(stopped)
 
     # ---- conversion preview (sizzle reel)
+    def _finish_images(self, settings, input_path, output_dir, t0):
+        """Depth-only images keep the depth half; 'two images' modes split each output into two files."""
+        from PIL import Image
+        mode = settings.get("image_output", "single")
+        depth_only = effective_settings(settings, input_path)["layout"] == DEPTH_ONLY
+        if mode == "single" and not depth_only:
+            return
+        exts = (".png", ".jpg", ".jpeg", ".webp")
+        made = []
+        for root, _dirs, files in os.walk(output_dir):
+            for fn in files:
+                p = path.join(root, fn)
+                if (not fn.lower().endswith(exts) or fn.startswith("_tmp_")
+                        or path.getmtime(p) < t0 - 1):
+                    continue
+                stem, ext = path.splitext(p)
+                if depth_only and mode == "single":
+                    if "_DEPTH" not in fn and "_RGBD" not in fn:
+                        continue
+                    target = p.replace(_iw3_utils.RGBD_SUFFIX, "_DEPTH")
+                    pairs = [(None, target)]
+                elif mode == "lr" and _iw3_utils.FULL_SBS_SUFFIX in fn:
+                    pairs = [(0, p.replace(_iw3_utils.FULL_SBS_SUFFIX, "_L")),
+                             (1, p.replace(_iw3_utils.FULL_SBS_SUFFIX, "_R"))]
+                elif mode == "rgb_depth" and _iw3_utils.RGBD_SUFFIX in fn:
+                    pairs = [(0, p.replace(_iw3_utils.RGBD_SUFFIX, "_RGB")),
+                             (1, p.replace(_iw3_utils.RGBD_SUFFIX, "_DEPTH"))]
+                else:
+                    continue
+                with Image.open(p) as im:
+                    im.load()
+                    W, H = im.size
+                    halves = [im.crop((0, 0, W // 2, H)), im.crop((W // 2, 0, W, H))]
+                kw = {"quality": 95} if ext.lower() in (".jpg", ".jpeg", ".webp") else {}
+                for which, target in pairs:
+                    part = halves[1] if which is None else halves[which]
+                    part.save(target, **kw)
+                    made.append(path.basename(target))
+                if all(t != p for _, t in pairs):
+                    os.remove(p)                       # the combined image is replaced by its parts
+        if made:
+            self.on_log("Saved: " + ", ".join(made[:6]) + (" …" if len(made) > 6 else ""))
+
+    def _download_lotus_if_needed(self, index, model_type):
+        """Lotus is ~3.8 GB: download it up front with visible progress instead of silently inside the engine."""
+        if model_type != "Lotus_D":
+            return
+        from . import lotus
+        if not lotus.missing_files():
+            return
+        self.on_log("⬇ Downloading the Lotus depth model (about 3.8 GB, first time only) — this can take a while…")
+        last = [0.0, 0]
+
+        def progress(done, total, name):
+            now = time.time()
+            if now - last[0] < 0.5 and done < total:
+                return
+            last[0] = now
+            gb = done / 1e9
+            msg = (f"downloading Lotus model… {gb:.2f} / {total / 1e9:.2f} GB ({done * 100 // total}%)"
+                   if total else f"downloading Lotus model… {gb:.2f} GB")
+            self.on_item(index, "Downloading", msg)
+            step = done * 10 // total if total else 0          # a log line every 10%
+            if step > last[1]:
+                last[1] = step
+                self.on_log(f"   Lotus download {step * 10}% ({gb:.2f} / {total / 1e9:.2f} GB)")
+
+        t0 = time.time()
+        lotus.ensure_downloaded(progress, self.stop_event)
+        self.on_log(f"✔ Lotus model downloaded in {time.time() - t0:.0f}s")
+        self.on_item(index, "Working", "in progress — output is named _tmp_… until finished")
+
     def _run_sizzle(self, index, input_path, settings, output_dir, total_sec, clip_sec, moments=None):
         """Build a short 2D reel of random moments (or your own `moments`), convert it, return True if stopped."""
         import shutil
@@ -610,6 +726,7 @@ class Converter:
         while True:
             try:
                 _META["comment"] = settings_comment(settings, path.basename(input_path))
+                _LIVE["depth_only"] = effective_settings(settings, input_path)["layout"] == DEPTH_ONLY
                 try:
                     from .title import TitleOverlay
                     _LIVE["title"] = TitleOverlay.create(settings, input_path) if is_video(input_path) else None
