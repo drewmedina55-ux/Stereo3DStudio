@@ -17,6 +17,11 @@ Stereo3D Studio is a desktop app built on [iw3](https://github.com/nagadomi/nuni
 2D-to-stereo engine. It estimates depth with modern AI depth models, builds a second eye for every frame, and encodes
 the result as side-by-side (SBS) 3D video — with a queue, presets, live preview and a one-click Windows installer.
 
+**New in 1.4 — a standard Windows setup wizard and experimental SHARP 3D for images and video.** Install with a
+normal Next → Next → Install wizard (no admin rights, uninstall from Windows Settings, your models are always kept on
+updates), and try Apple's **SHARP**, which turns every picture or video frame into a real 3D scene and films it with
+two virtual cameras. See [Install](#install) and [SHARP](#-sharp-3d-scene-experimental).
+
 **New in 1.2 — a depth map creator, too.** Stereo3D Studio can now save just the depth map of any image or video, or
 split images into separate files (left + right eye, or colour + depth). With the new **Lotus** and **Lotus-2** models
 it makes some of the most detailed depth maps available — useful well beyond 3D video: for compositing, relighting,
@@ -51,8 +56,11 @@ Source footage: [Women Holding Lighted Candles](https://www.pexels.com/video/wom
 - **Drag & drop queue** for videos, images and whole folders, with thumbnails; finished items leave the queue.
 - **Odyssey 3D presets** — Half SBS output, Depth Anything V2 Large, MLBW + inpaint stereo, tuned for 16 GB GPUs.
 - **Every 3D format**: Half / Full SBS, top-bottom, VR180, cross-eyed, anaglyph, RGB + depth — see [3D output modes](#3d-output-modes).
-- **🧪 SHARP 3D scene (experimental)** — Apple's SHARP turns a picture into a real 3D scene and films it with two
-  virtual cameras. See [SHARP](#-sharp-3d-scene-experimental).
+- **🆕 Setup wizard** — a standard Windows installer: no admin rights, Start-menu entry, uninstall from Windows
+  Settings → Apps, and updates that always keep your downloaded models. See [Install](#install).
+- **🧪 SHARP 3D scene (experimental) — images and video** — Apple's SHARP turns each picture or video frame into a
+  real 3D scene and films it with two virtual cameras, with its own **★ Experimental · SHARP 3D scene (Odyssey)**
+  preset. See [SHARP](#-sharp-3d-scene-experimental).
 - **🆕 Depth map creator** — new **Depth map only** layout and two-file image saving (left + right, or colour + depth).
   See [Depth maps & image files](#-depth-maps--image-files).
 - **🆕 Lotus depth** — diffusion-based depth with very fine, crisp detail. Made for images, and works well for video
@@ -226,16 +234,22 @@ behind foreground objects — and Stereo3D Studio films that scene with **two vi
   stretching or smeared fill-in around people and objects.
 - **How to use it:** Settings → 3D → Stereo generation → **Method → SHARP 3D scene**. The depth model menu greys out
   (SHARP brings its own depth). **3D strength** and **Screen plane** work exactly as with the other methods.
-- **Images and videos.** Pictures, folders and videos, with all layouts except VR180, the 16:9 side bars, **Save
-  images as** (left + right, colour + depth) and **Depth map only**. Videos are converted **frame by frame** (every
+- **Images and videos.** Pictures, folders and videos. Works with every layout except VR180 — including the 16:9 side
+  bars, **Save images as** (left + right, colour + depth) and **Depth map only** — plus **Preview frame**,
+  **Conversion preview** and **Moments preview**. Videos are converted **frame by frame** (every
   frame becomes its own 3D scene) with sound, Processing size, codec, title and the live view as usual — and the
   scene's depth range is smoothed between frames (**Smooth depth between frames**) to keep the 3D steady.
 - **Video takes time:** every frame is a full SHARP prediction plus two renders, so expect seconds per frame.
   Use the preset **★ Experimental · SHARP 3D scene (Odyssey)** (Half SBS, 1080p, 30 fps, FP16, GPU encoder) and
   keep **SHARP render** at **Balanced — 1080p**; **Fast — 720p** is about twice as fast for quick tests. Try
   **Conversion preview** on a clip first. Some flicker can remain, since SHARP looks at each frame on its own.
+- **SHARP render** (under Method, videos): how big the eyes are rendered before the frame is scaled to your
+  Processing size — **Fast — 720p**, **Balanced — 1080p** (recommended; SHARP's own detail is about 768 pixels, so it
+  loses very little) or **Full — processing size**. Each eye is rendered straight at its final size (half width for
+  Half SBS), and depth layouts skip the eyes entirely.
 - **No compiling:** SHARP's own renderer needs gsplat, which has to compile CUDA code on your PC. Stereo3D Studio
-  renders the splats with its own PyTorch renderer instead, so it just works.
+  renders the splats with its own PyTorch renderer instead, so it just works. It draws each frame in strips, so its
+  memory stays small and fixed and never overflows the graphics card.
 - **Download:** Models → **Apple SHARP — 3D scene method** → accept the license → Download (2.7 GB from Apple).
 
 > **License:** SHARP's weights are under the **Apple Machine Learning Research Model License — research use only,
@@ -292,14 +306,30 @@ of any model in Stereo3D Studio — fine hair, thin objects, even paintings and 
 
 ## Install
 
-1. Download the latest `Stereo3DStudio_vX.Y.Z_Setup.zip` from **Releases** and extract it where the app should live
-   (for example `C:\Apps\Stereo3DStudio`).
-2. Double-click **`Install Stereo3D Studio.bat`**. It downloads a private Python 3.12, the PyTorch CUDA build that
-   matches your driver, the 3D engine's packages and the default depth model. Nothing is installed system-wide.
-3. Start **Stereo3D Studio** from the Desktop or Start-menu shortcut.
+**Setup wizard (recommended)**
 
-Upgrading: copy the `models` folder from your old install into the new folder before running its installer, so
-nothing is downloaded again. Settings and presets are kept automatically.
+1. Download the latest **`Stereo3DStudio_vX.Y_Setup.exe`** from [**Releases**](https://github.com/drewmedina55-ux/Stereo3DStudio/releases/latest).
+2. Run it. Windows may show *"Windows protected your PC"* because the installer isn't code-signed — click
+   **More info → Run anyway**.
+3. Click through Welcome → License → Components (desktop shortcut, Depth Anything V2 Large) → Folder → **Install**.
+   Setup copies the app, then downloads a private Python 3.12, the PyTorch CUDA build that matches your driver and the
+   3D engine's packages, with the live log on screen (usually 5–20 minutes). No admin rights; nothing is installed
+   system-wide. The default folder is `%LOCALAPPDATA%\Programs\Stereo3D Studio`.
+4. Finish with **Start Stereo3D Studio** ticked, or use the Desktop / Start-menu shortcut later.
+
+- **Updating:** run the newer setup into the same folder. Your **downloaded models are always kept** — only the
+  program files are replaced — and settings and presets stay as they are.
+- **Repairing:** run the setup again.
+- **Uninstalling:** Windows Settings → Apps → Stereo3D Studio. It asks before deleting your models (default: keep).
+
+**Zip package (alternative)**
+
+1. Download `Stereo3DStudio_vX.Y_Setup.zip` from **Releases** and extract it where the app should live
+   (for example `C:\Apps\Stereo3DStudio`).
+2. Double-click **`Install Stereo3D Studio.bat`**, then start **Stereo3D Studio** from the Desktop shortcut.
+
+Upgrading with the zip: copy the `models` folder from your old install into the new folder before running its
+installer, so nothing is downloaded again.
 
 ## Quick start
 
@@ -334,7 +364,9 @@ runtime\Scripts\python.exe -m stereo3dstudio
 
 Releases are built automatically. Raise `VERSION` in `app/stereo3dstudio/__init__.py`, add
 `release-notes/v<version>.md`, and push to `main`: the **Build and release** workflow builds the full setup package
-on a Windows runner (including the launcher EXE) and publishes it as release `v<version>`.
+on a Windows runner (including the launcher EXE), compiles the setup wizard from
+[`installer/Stereo3DStudio.nsi`](installer/Stereo3DStudio.nsi) with NSIS, and publishes both as release
+`v<version>`.
 
 ### Project layout
 
