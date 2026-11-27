@@ -39,18 +39,6 @@ A collection of clips converted to 3D with Stereo3D Studio.<br>
 **[▶ Watch on YouTube](https://youtu.be/vYIqblgsJ9o)**<br>
 **[⬇ Download the high quality version](https://1drv.ms/f/c/1f85c9e842de5eb2/IgAjcoXeWYCaSZ3xKUG53v7lAQbykXhXwq4jJwUtVYFFXB0?e=GlCYd6)** (watch in 3D on a compatible device).
 
-<p align="center">
-  <a href="https://github.com/drewmedina55-ux/Stereo3DStudio/raw/main/docs/sample/candles_Any_V2_L_HSBS.mp4">
-    <img src="docs/sample/candles_preview.gif" width="800" alt="Women holding lit candles converted to Half SBS 3D with Stereo3D Studio">
-  </a>
-</p>
-
-A stock clip converted to Half SBS 3D with Depth Anything V2 Large.
-**[⬇ Download the 3D video](https://github.com/drewmedina55-ux/Stereo3DStudio/raw/main/docs/sample/candles_Any_V2_L_HSBS.mp4)**
-(MP4, HEVC, 1920×1080 Half SBS, 12 s, 6.6 MB).
-
-Source footage: [Women Holding Lighted Candles](https://www.pexels.com/video/women-holding-lighted-candles-8811204/) on Pexels.
-
 ## Features
 
 - **Drag & drop queue** for videos, images and whole folders, with thumbnails; finished items leave the queue.
