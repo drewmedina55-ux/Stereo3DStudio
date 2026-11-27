@@ -85,9 +85,9 @@ USING IT
   as): left + right eye (*_L / *_R) or colour + depth (*_RGB / *_DEPTH).
 
 TIPS
-  - SHARP 3D scene (experimental, images): Settings > 3D > Method >
-    SHARP. Apple's SHARP turns each picture into a 3D scene and films it
-    with two virtual cameras. Download it once in the Models window
+  - SHARP 3D scene (experimental): Settings > 3D > Method > SHARP.
+    Apple's SHARP turns each picture (or video frame) into a 3D scene and
+    films it with two virtual cameras. Slow on video - try a clip first. Download it once in the Models window
     (2.7 GB, research-use-only license).
   - Images: adding pictures switches to the "Images · Lotus (sharp
     detail)" preset (Lotus depth, very fine detail); adding videos

@@ -51,6 +51,16 @@ jobs:
           7z a -tzip "$name`_Setup.zip" $name | Out-Null
           Pop-Location
           Get-Item "out/$name`_Setup.zip" | Format-List Name, Length
+          # standard Windows setup wizard (NSIS) from the same files, without the zip-only .bat installers and
+          # without a models folder (so installing over an existing install never touches downloaded models)
+          $stage = (New-Item -ItemType Directory -Force "out/wizard").FullName
+          Copy-Item -Recurse "out/$name/*" $stage
+          Remove-Item -Recurse -Force "$stage/models", "$stage/Install Stereo3D Studio.bat", "$stage/Uninstall Stereo3D Studio.bat", "$stage/installer/Stereo3DStudio.nsi" -ErrorAction SilentlyContinue
+          $makensis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          if (-not (Test-Path $makensis)) { choco install nsis -y --no-progress | Out-Null }
+          & $makensis /V2 "/DVERSION=$v" "/DSRC=$stage" "installer\Stereo3DStudio.nsi"
+          Move-Item "installer\$name`_Setup.exe" "out\$name`_Setup.exe"
+          Get-Item "out/$name`_Setup.exe" | Format-List Name, Length
 
       - name: Publish release
         if: steps.ver.outputs.exists == 'false'
@@ -59,6 +69,6 @@ jobs:
           $v = "${{ steps.ver.outputs.version }}"
           $notes = "release-notes/v$v.md"
           if (-not (Test-Path $notes)) { "Stereo3D Studio $v - see CHANGELOG.md." | Set-Content $notes }
-          gh release create "v$v" "out/Stereo3DStudio_v$v`_Setup.zip" --title "Stereo3D Studio $v" --notes-file $notes --target $env:GITHUB_SHA --latest
+          gh release create "v$v" "out/Stereo3DStudio_v$v`_Setup.exe" "out/Stereo3DStudio_v$v`_Setup.zip" --title "Stereo3D Studio $v" --notes-file $notes --target $env:GITHUB_SHA --latest
         env:
           GH_TOKEN: ${{ github.token }}

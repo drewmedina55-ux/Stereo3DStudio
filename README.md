@@ -226,9 +226,13 @@ behind foreground objects — and Stereo3D Studio films that scene with **two vi
   stretching or smeared fill-in around people and objects.
 - **How to use it:** Settings → 3D → Stereo generation → **Method → SHARP 3D scene**. The depth model menu greys out
   (SHARP brings its own depth). **3D strength** and **Screen plane** work exactly as with the other methods.
-- **Images for now** — single pictures and folders. It works with all image layouts except VR180, the 16:9 side bars,
-  **Save images as** (left + right, colour + depth) and **Depth map only**. **Preview frame** also works on video
-  frames, so you can see what a scene would look like. Videos in the queue are skipped.
+- **Images and videos.** Pictures, folders and videos, with all layouts except VR180, the 16:9 side bars, **Save
+  images as** (left + right, colour + depth) and **Depth map only**. Videos are converted **frame by frame** (every
+  frame becomes its own 3D scene) with sound, Processing size, codec, title and the live view as usual — and the
+  scene's depth range is smoothed between frames (**Smooth depth between frames**) to keep the 3D steady.
+- **It's slow on video:** every frame is a full 1536-pixel SHARP prediction plus two renders — think seconds per
+  frame, not frames per second. Try **Preview frame** or **Conversion preview** on a clip first, and use 1080p or
+  lower Processing size. Some flicker can remain, since SHARP looks at each frame on its own.
 - **No compiling:** SHARP's own renderer needs gsplat, which has to compile CUDA code on your PC. Stereo3D Studio
   renders the splats with its own PyTorch renderer instead, so it just works.
 - **Download:** Models → **Apple SHARP — 3D scene method** → accept the license → Download (2.7 GB from Apple).

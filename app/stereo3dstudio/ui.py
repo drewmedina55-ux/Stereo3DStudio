@@ -2129,7 +2129,7 @@ class MainWindow(QMainWindow):
         self.cb_model.setToolTip("Not used by SHARP — it predicts its own 3D scene from the picture." if sharp else "")
         self.cb_method.setToolTip(
             "SHARP (Apple): turns each picture into a 3D scene of Gaussian splats and films it with two virtual "
-            "cameras — real geometry instead of shifted pixels. Images only; uses 3D strength and Screen plane. "
+            "cameras — real geometry instead of shifted pixels. Works on images and videos (videos frame by frame, which is slow — try Conversion preview first). Uses 3D strength and Screen plane. "
             "Needs a one-time 2.7 GB download (Models window)." if sharp else "")
 
     def _ensure_model(self, s):
@@ -2145,10 +2145,6 @@ class MainWindow(QMainWindow):
                     self.open_models("SHARP_3D")
                 if not _SH.is_ready():
                     return False
-            if any(it["type"] == "Video" for it in self.items) and \
-                    QMessageBox.question(self, APP_NAME, "SHARP works on images for now — videos in the queue will be "
-                                         "skipped. Continue?") != QMessageBox.Yes:
-                return False
             return True
         m = s["depth_model"]
         if m == "Lotus2_D":

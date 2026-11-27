@@ -6,6 +6,7 @@ and two virtual cameras film it. Edges and the areas revealed behind objects com
 
 SHARP's code is bundled unmodified in thirdparty/sharp (Apple sample code license). Its weights are downloaded
 from Apple in the Models window (Apple Machine Learning Research Model License — research use only).
+Videos are converted frame by frame (each frame is its own 3D scene), with the depth range smoothed between frames.
 SHARP's own renderer needs gsplat, which compiles CUDA code on the user's machine; Stereo3D Studio renders with
 the pure-PyTorch rasterizer below instead, so nothing has to be compiled.
 
@@ -92,13 +93,16 @@ def focal_px(width, height, focal_mm=DEFAULT_FOCAL_MM):
 
 
 @torch.inference_mode()
-def predict(net, image, f_px):
-    """image: (3, H, W) float 0..1 on the model's device -> Gaussians3D in camera space (OpenCV axes)."""
-    from sharp.utils.gaussians import unproject_gaussians
+def predict(net, image, f_px, half=False):
+    """image: (3, H, W) float 0..1 on the model's device -> Gaussians3D in camera space (OpenCV axes).
+    half=True runs the network in FP16 on the GPU (about twice as fast; the ComfyUI SHARP nodes default to it)."""
+    from sharp.utils.gaussians import Gaussians3D, unproject_gaussians
     _, H, W = image.shape
     dev = image.device
     x = F.interpolate(image[None].float(), size=(INTERNAL, INTERNAL), mode="bilinear", align_corners=True)
-    g_ndc = net(x, torch.tensor([f_px / W], device=dev, dtype=torch.float32))
+    with torch.autocast("cuda", dtype=torch.float16, enabled=bool(half) and dev.type == "cuda"):
+        g_ndc = net(x, torch.tensor([f_px / W], device=dev, dtype=torch.float32))
+    g_ndc = Gaussians3D(*(t.float() for t in g_ndc))
     K = torch.tensor([[f_px, 0, W / 2, 0], [0, f_px, H / 2, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
                      device=dev, dtype=torch.float32)
     K[0] *= INTERNAL / W
@@ -206,8 +210,12 @@ def rasterize(means, cov3, colors, opacities, fx, fy, cx, cy, W, H, eps2d=0.3, c
 
 
 # ======================================================================================= stereo
-def stereo_params(gaussians, f_px, W, H, divergence, convergence):
-    """(baseline, zero-parallax inverse depth, near/far inverse depth) matching iw3's 3D strength / screen plane."""
+def stereo_params(gaussians, f_px, W, H, divergence, convergence, smooth=None, decay=0.75):
+    """(baseline, zero-parallax inverse depth, near/far inverse depth) matching iw3's 3D strength / screen plane.
+
+    smooth: a dict kept between video frames. SHARP sees every frame on its own, so the scene's depth range jumps
+    a little from frame to frame; smoothing it (like iw3's "smooth depth between frames") keeps the 3D strength
+    and screen plane steady. A big jump (a scene cut) restarts the smoothing."""
     z = gaussians.mean_vectors[0, :, 2]
     op = gaussians.opacities[0]
     zz = z[(op > 0.5) & (z > 1e-2)]
@@ -217,6 +225,15 @@ def stereo_params(gaussians, f_px, W, H, divergence, convergence):
     if len(d) > 2_000_000:
         d = d[torch.randperm(len(d), device=d.device)[:2_000_000]]
     d_far, d_near = torch.quantile(d.float(), torch.tensor([0.02, 0.98], device=d.device)).tolist()
+    if smooth is not None:
+        prev = smooth.get("range")
+        if prev is not None:
+            p_far, p_near = prev
+            p_span, r_span = max(p_near - p_far, 1e-6), max(d_near - d_far, 1e-6)
+            if 1 / 3 < r_span / p_span < 3 and abs(d_far - p_far) < p_span:          # same shot: smooth
+                d_far = decay * p_far + (1 - decay) * d_far
+                d_near = decay * p_near + (1 - decay) * d_near
+        smooth["range"] = (d_far, d_near)
     span = max(d_near - d_far, 1e-6)
     disparity_range = divergence * 0.01 * max(W, H)                  # pixels between eyes, far -> near
     baseline = disparity_range / (f_px * span)
@@ -230,13 +247,15 @@ def _srgb(lin):
 
 
 @torch.inference_mode()
-def render_views(gaussians, f_px, W, H, divergence=2.0, convergence=0.5, background=None, need_depth=False):
-    """Left and right eye images (3,H,W) 0..1 sRGB; optional center-view disparity map (1,H,W) 0..1 (near = 1)."""
+def render_views(gaussians, f_px, W, H, divergence=2.0, convergence=0.5, background=None, need_depth=False,
+                 smooth=None, decay=0.75):
+    """Left and right eye images (3,H,W) 0..1 sRGB; optional center-view disparity map (1,H,W) 0..1 (near = 1).
+    smooth/decay: see stereo_params (video)."""
     means = gaussians.mean_vectors[0]
     cov3 = _covariances(gaussians.quaternions[0], gaussians.singular_values[0])
     colors = gaussians.colors[0]
     opac = gaussians.opacities[0]
-    baseline, d0, d_near, d_far = stereo_params(gaussians, f_px, W, H, divergence, convergence)
+    baseline, d0, d_near, d_far = stereo_params(gaussians, f_px, W, H, divergence, convergence, smooth, decay)
     cx, cy = W / 2, H / 2
     eyes = []
     for sign in (-1.0, 1.0):                                         # left eye at -b/2, right eye at +b/2

@@ -556,9 +556,6 @@ class Converter:
                 if self.stop_event.is_set():
                     stopped = True
                     break
-                if (opts.get("sizzle") or opts.get("moments")) and settings.get("method") == "sharp":
-                    self.on_item(index, "Error", "SHARP works on images for now — previews of videos aren't available")
-                    continue
                 if opts.get("sizzle") or opts.get("moments"):
                     total_clip = opts.get("sizzle") or (0, 0)
                     stopped = self._run_sizzle(index, input_path, settings, output_dir, *total_clip,
@@ -612,23 +609,43 @@ class Converter:
                 sharp3d.unload()                       # give the GPU memory back
             self.on_done(stopped)
 
-    # ---- Apple SHARP (3D Gaussian scene) — images
+    # ---- Apple SHARP (3D Gaussian scene) — images and videos
     def _sharp_device(self, settings):
         gpu = int(settings.get("gpu", 0) or 0)
         if torch.cuda.is_available() and gpu >= 0:
             return torch.device(f"cuda:{gpu}")
         return torch.device("cpu")
 
+    def _sharp_check_layout(self, layout):
+        from . import sharp3d as SH
+        if not SH.layout_supported(layout):
+            raise RuntimeError(f"SHARP doesn't support the “{layout}” layout yet — choose SBS, top-bottom, "
+                               "cross-eyed, anaglyph or a depth layout.")
+
+    def _sharp_render(self, net, settings, img, layout, pad16, smooth=None):
+        """(3,H,W) 0..1 picture on the GPU -> SHARP scene -> finished frame in `layout` (3,h,w) 0..1."""
+        from . import sharp3d as SH
+        _, H, W = img.shape
+        f_px = SH.focal_px(W, H)
+        g = SH.predict(net, img, f_px, half=bool(settings.get("fp16", True)))
+        need_depth = "Depth" in layout
+        decay = float(settings.get("ema_decay", 0.75)) if settings.get("ema_normalize", True) else 0.0
+        L, R, D = SH.render_views(g, f_px, W, H, float(settings.get("divergence", 2.2)),
+                                  float(settings.get("convergence", 0.45)), background=img, need_depth=need_depth,
+                                  smooth=smooth, decay=decay)
+        del g
+        if pad16:
+            L, R = SH.pad_16x9(L), SH.pad_16x9(R)
+        comp_layout = "RGB + Depth" if layout == DEPTH_ONLY else layout   # the live tap keeps the depth half
+        return SH.compose(comp_layout, L, R, depth=D, image=img).clamp(0, 1)
+
     def _sharp_one(self, net, device, settings, src, output_dir):
         """One picture -> SHARP scene -> eyes -> the same file iw3 would have written (name, layout, format)."""
         from PIL import Image, ImageOps
         from torchvision.transforms import functional as TF
-        from . import sharp3d as SH
         s_eff = effective_settings(settings, src)
         layout = s_eff["layout"]
-        if not SH.layout_supported(layout):
-            raise RuntimeError(f"SHARP doesn't support the “{layout}” layout yet — choose SBS, top-bottom, "
-                               "cross-eyed, anaglyph or a depth layout.")
+        self._sharp_check_layout(layout)
         args = build_args(settings, src, output_dir)
         args.depth_model = "SHARP"
         _LIVE["depth_only"] = layout == DEPTH_ONLY
@@ -638,17 +655,10 @@ class Converter:
         scale = min(1.0, 3840 / max(W0, H0))                  # render at most 4K on the long side
         W, H = max(16, round(W0 * scale)), max(16, round(H0 * scale))
         img = TF.to_tensor(im.resize((W, H), Image.LANCZOS) if scale < 1 else im).to(device)
-        f_px = SH.focal_px(W, H)
-        g = SH.predict(net, img, f_px)
         if self.stop_event.is_set():
             return None
-        need_depth = "Depth" in layout
-        L, R, D = SH.render_views(g, f_px, W, H, float(settings.get("divergence", 2.2)),
-                                  float(settings.get("convergence", 0.45)), background=img, need_depth=need_depth)
-        if getattr(args, "pad_mode", None) == "16:9":
-            L, R = SH.pad_16x9(L), SH.pad_16x9(R)
-        comp_layout = "RGB + Depth" if layout == DEPTH_ONLY else layout
-        out = SH.compose(comp_layout, L, R, depth=D, image=img).clamp(0, 1).cpu()
+        out = self._sharp_render(net, settings, img, layout, getattr(args, "pad_mode", None) == "16:9")
+        out = out.cpu()
         if scale < 1 and out.shape[-1] > 0:                     # back to the source size
             k = 1 / scale
             out = F.interpolate(out[None], size=(round(out.shape[1] * k), round(out.shape[2] * k)),
@@ -657,22 +667,82 @@ class Converter:
         _iw3_utils.save_tensor_image(out, dest, format=args.format)
         return dest
 
+    def _sharp_video(self, settings, input_path, output_dir, net, device):
+        """Video -> SHARP scene for every frame -> stereo video, through the same video pipeline iw3 uses
+        (processing size, codec, FPS limit, audio copy, title, live view, _tmp_ name until finished)."""
+        import nunif.utils.video as VU
+        from iw3.utils import add_preprocess_vf, extract_frame_rgb_alpha, make_video_codec_option
+        layout = settings["layout"]
+        self._sharp_check_layout(layout)
+        args = build_args(settings, input_path, output_dir)
+        args.depth_model = "SHARP"
+        args.video_extension = "." + args.video_format          # what iw3's set_state_args would fill in
+        if not args.profile_level or args.profile_level == "auto":
+            args.profile_level = None
+        _LIVE["depth_only"] = layout == DEPTH_ONLY
+        _META["comment"] = settings_comment(settings, path.basename(input_path))
+        try:
+            from .title import TitleOverlay
+            _LIVE["title"] = TitleOverlay.create(settings, input_path)
+        except Exception as e:
+            _LIVE["title"] = None
+            self.on_log(f"Title skipped: {e}")
+        pad16 = getattr(args, "pad_mode", None) == "16:9"
+        smooth = {}
+        dest = path.join(output_dir, _make_output_filename(path.basename(input_path), args, video=True))
+
+        def config_callback(metadata):
+            fps = metadata.get_fps()
+            if float(fps) > args.max_fps:
+                fps = args.max_fps
+            return VU.VideoOutputConfig(
+                fps=fps, container_format=args.video_format, video_codec=args.video_codec, pix_fmt=args.pix_fmt,
+                colorspace=args.colorspace, options=make_video_codec_option(args, input_path),
+                container_options={"movflags": "+faststart"} if args.video_format == "mp4" else {})
+
+        @torch.inference_mode()
+        def frame_callback(frame):
+            if frame is None:                                   # flush: nothing is buffered
+                return None
+            x, _alpha = extract_frame_rgb_alpha(frame, device)
+            out = self._sharp_render(net, settings, x.float(), layout, pad16, smooth)
+            if out.shape[1] % 2 or out.shape[2] % 2:            # encoders need even sizes
+                out = F.pad(out, (0, out.shape[2] % 2, 0, out.shape[1] % 2))
+            return out
+
+        self.on_log(f"▶ {path.basename(input_path)} (SHARP 3D scene, every frame — this is slow; "
+                    "try a short clip or Conversion preview first)")
+        VU.process_video(
+            input_path, dest, config_callback=config_callback, frame_callback=frame_callback,
+            vf=add_preprocess_vf(args.vf, args), stop_event=self.stop_event, suspend_event=self.suspend_event,
+            tqdm_fn=lambda **kw: ProgressBar(self.on_progress, **kw), title=path.basename(input_path),
+            start_time=args.start_time, end_time=args.end_time, device=device,
+            hwaccel=args.hwaccel, disable_software_fallback=getattr(args, "disable_software_fallback", False))
+        return dest
+
     def _convert_sharp(self, index, settings, input_path, output_dir):
         from . import sharp3d as SH
         kind = classify(input_path)
+        device = self._sharp_device(settings)
+        if SH._MODEL["net"] is None:
+            self.on_log(f"Loading Apple SHARP on {device}…")
+        net = SH.load(device)
         if kind == "Video":
-            raise RuntimeError("SHARP is for images for now (every frame is a full 3D scene) — skipped. "
-                               "Use another method for videos.")
+            try:
+                dest = self._sharp_video(settings, input_path, output_dir, net, device)
+            except torch.cuda.OutOfMemoryError:
+                torch.cuda.empty_cache()
+                raise RuntimeError("The GPU ran out of memory for SHARP. Close other GPU apps or lower "
+                                   "Processing size (Video tab).")
+            if not self.stop_event.is_set():
+                self.on_log(f"   saved {path.basename(dest)}")
+            return
         if kind == "Folder":
             exts = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff")
             walker = os.walk(input_path) if settings.get("recursive") else [(input_path, [], os.listdir(input_path))]
             files = sorted(path.join(r, f) for r, _d, fs in walker for f in fs if f.lower().endswith(exts))
         else:
             files = [input_path]
-        device = self._sharp_device(settings)
-        if SH._MODEL["net"] is None:
-            self.on_log(f"Loading Apple SHARP on {device}…")
-        net = SH.load(device)
         self.on_log(f"▶ {path.basename(input_path)} (SHARP 3D scene)")
         for i, src in enumerate(files):
             if self.stop_event.is_set():
@@ -791,8 +861,11 @@ class Converter:
                 f"{int(st // 3600)}:{int(st % 3600 // 60):02d}:{int(st % 60):02d}" for st, _ in moments))
             self.on_item(index, "Working", "converting preview…")
             os.makedirs(output_dir, exist_ok=True)
-            args = self._prepare(settings, reel, output_dir)
-            self._convert_with_recovery(settings, reel, output_dir, args)
+            if settings.get("method") == "sharp":
+                self._convert_sharp(index, settings, reel, output_dir)
+            else:
+                args = self._prepare(settings, reel, output_dir)
+                self._convert_with_recovery(settings, reel, output_dir, args)
             if self.stop_event.is_set():
                 self.on_item(index, "Stopped", "")
                 return True
