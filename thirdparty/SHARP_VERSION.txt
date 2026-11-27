@@ -7,3 +7,4 @@ Model weights are NOT included; the user downloads them from Apple after accepti
 Apple Machine Learning Research Model License (sharp_licenses/LICENSE_MODEL) - research use only.
 The gsplat renderer module (sharp/utils/gsplat.py) is not used: Stereo3D Studio renders with its own
 PyTorch rasterizer (app/stereo3dstudio/sharp3d.py), so no CUDA compiler is needed.
+SHARP's .ply export (which needs the GPL-3.0 plyfile package) is not used; a stand-in module replaces plyfile.

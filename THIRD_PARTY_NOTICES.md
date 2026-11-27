@@ -20,7 +20,6 @@
 | PyAV, FFmpeg libraries | BSD / LGPL |
 | diffusers, transformers, peft (Hugging Face) — used to run Lotus / Lotus-2 | Apache 2.0 |
 | bitsandbytes — 4-bit Lotus-2 | MIT |
-| plyfile — used by SHARP's code | GPL-3.0 (installed as a separate package, not bundled) |
 | Other Python packages from `engine/requirements.txt` | their respective licenses |
 
 ## Depth models (downloaded on first use or from the Models window)

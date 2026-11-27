@@ -14,6 +14,8 @@ the eyes spans divergence% of the long image side from the farthest to the neare
 sits at `convergence` (0 = everything in front of the screen, 1 = everything behind it).
 """
 import math
+import sys
+import types
 from os import path
 
 import torch
@@ -41,6 +43,22 @@ def layout_supported(layout):
 
 # ======================================================================================= model
 _MODEL = {"net": None, "device": None}
+
+
+def _no_ply():
+    """SHARP's gaussians module imports plyfile (GPL-3.0) only to save .ply files, which Stereo3D Studio never
+    does. A stand-in keeps that package out of the app entirely."""
+    if "plyfile" in sys.modules:
+        return
+    stub = types.ModuleType("plyfile")
+
+    def _unavailable(*_a, **_k):
+        raise RuntimeError("Saving .ply files isn't available in Stereo3D Studio.")
+    stub.PlyData = stub.PlyElement = _unavailable
+    sys.modules["plyfile"] = stub
+
+
+_no_ply()
 
 
 def load(device, state_dict=None):
