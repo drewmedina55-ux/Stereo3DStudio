@@ -78,6 +78,8 @@ def load(device, state_dict=None):
     if state_dict != "random":
         net.load_state_dict(state_dict)
     net.eval().to(device)
+    if device.type == "cuda":
+        torch.backends.cudnn.benchmark = True        # SHARP always runs at 1536x1536: let cuDNN pick fast kernels
     _MODEL.update(net=net, device=device)
     return net
 
@@ -123,18 +125,23 @@ def _covariances(quats, scales):
     return (R * S[..., None, :]) @ R.transpose(-1, -2)
 
 
-_RADII = (1, 2, 3, 4, 6, 8, 12, 16)
+_RADII = (1, 2, 3, 4, 6, 8, 12, 16, 24, 32)        # footprint half-sizes in pixels (x and y bucketed separately)
 
 
 @torch.inference_mode()
-def rasterize(means, cov3, colors, opacities, fx, fy, cx, cy, W, H, eps2d=0.3, chunk=262144):
+def rasterize(means, cov3, colors, opacities, fx, fy, cx, cy, W, H, eps2d=0.3, band=64):
     """Front-to-back alpha compositing of 3D Gaussians (EWA splatting), all in PyTorch.
+
+    The image is rendered in horizontal bands so memory stays small and fixed whatever the scene (a whole frame
+    at once can need many GB, and on Windows overflowing the graphics card makes it fall back to system RAM,
+    which is extremely slow). Each splat's footprint is cut where it drops below 1/255 for its own opacity, with
+    separate widths and heights, so thin or faint splats cost little.
 
     means (N,3), cov3 (N,3,3), colors (N,3), opacities (N,) in camera space; returns
     color (3,H,W), alpha (1,H,W), depth (1,H,W)."""
     dev = means.device
     z = means[:, 2]
-    keep = z > 1e-2
+    keep = (z > 1e-2) & (opacities > 1 / 255)
     means, cov3, colors, opacities, z = means[keep], cov3[keep], colors[keep], opacities[keep], z[keep]
     x, y = means[:, 0], means[:, 1]
     u = fx * x / z + cx
@@ -143,69 +150,88 @@ def rasterize(means, cov3, colors, opacities, fx, fy, cx, cy, W, H, eps2d=0.3, c
     J = torch.stack([torch.stack([fx / z, zero, -fx * x / z ** 2], -1),
                      torch.stack([zero, fy / z, -fy * y / z ** 2], -1)], -2)          # (N,2,3)
     cov2 = J @ cov3 @ J.transpose(-1, -2)
+    del J
     a = cov2[:, 0, 0] + eps2d
     b = cov2[:, 0, 1]
     c = cov2[:, 1, 1] + eps2d
+    del cov2
     det = (a * c - b * b).clamp(min=1e-12)
-    mid = 0.5 * (a + c)
-    lam = mid + torch.sqrt((mid * mid - det).clamp(min=0.01))
-    radius = torch.ceil(3.0 * torch.sqrt(lam))
     ia, ib, ic = c / det, -b / det, a / det                                             # conic (inverse cov)
-    onscreen = (u + radius > 0) & (u - radius < W) & (v + radius > 0) & (v - radius < H) & (opacities > 1 / 255)
+    k = torch.sqrt(2 * torch.log((255 * opacities).clamp(min=1.0)))                     # alpha >= 1/255 inside
+    rx = torch.ceil(k * torch.sqrt(a)).clamp(min=1, max=_RADII[-1])
+    ry = torch.ceil(k * torch.sqrt(c)).clamp(min=1, max=_RADII[-1])
+    onscreen = (u + rx > 0) & (u - rx < W) & (v + ry > 0) & (v - ry < H) & (k > 0)
     order = torch.argsort(z[onscreen])                                                  # front to back
     idx = torch.nonzero(onscreen).squeeze(1)[order]
+    del order, onscreen
+    n_vis = len(idx)
     rank = torch.empty(len(z), dtype=torch.long, device=dev)
-    rank[idx] = torch.arange(len(idx), device=dev)
+    rank[idx] = torch.arange(n_vis, device=dev)
+    radii = torch.tensor(_RADII, device=dev, dtype=rx.dtype)
+    nb = len(_RADII)
+    bucket = torch.bucketize(rx, radii) * nb + torch.bucketize(ry, radii)              # (x size, y size) bucket
+    ylo, yhi = v - ry, v + ry
 
-    pix_l, rank_l, alpha_l = [], [], []
-    bucket = torch.bucketize(radius[idx].clamp(max=_RADII[-1]), torch.tensor(_RADII, device=dev, dtype=radius.dtype))
-    for bi, R in enumerate(_RADII):
-        sel = idx[bucket == bi]
-        if not len(sel):
-            continue
-        off = torch.arange(-R, R + 1, device=dev)
-        oy, ox = torch.meshgrid(off, off, indexing="ij")
-        ox, oy = ox.reshape(-1), oy.reshape(-1)
-        for s in range(0, len(sel), max(1, chunk // len(ox))):
-            g = sel[s:s + max(1, chunk // len(ox))]
-            px = torch.floor(u[g])[:, None] + ox[None]
-            py = torch.floor(v[g])[:, None] + oy[None]
-            dx = px + 0.5 - u[g][:, None]
-            dy = py + 0.5 - v[g][:, None]
-            power = -0.5 * (ia[g][:, None] * dx * dx + ic[g][:, None] * dy * dy) - ib[g][:, None] * dx * dy
-            alpha = (opacities[g][:, None] * torch.exp(power.clamp(max=0))).clamp(max=0.99)
-            m = (alpha >= 1 / 255) & (px >= 0) & (px < W) & (py >= 0) & (py < H)
-            if not m.any():
-                continue
-            gg = g[:, None].expand_as(m)[m]
-            pix_l.append((py[m] * W + px[m]).long())
-            rank_l.append(rank[gg])
-            alpha_l.append(alpha[m])
     color = torch.zeros(3, H * W, device=dev)
     acc = torch.zeros(H * W, device=dev)
     dep = torch.zeros(H * W, device=dev)
-    if not pix_l:
-        return color.view(3, H, W), acc.view(1, H, W), dep.view(1, H, W)
-    pix = torch.cat(pix_l)
-    rk = torch.cat(rank_l)
-    al = torch.cat(alpha_l)
-    del pix_l, rank_l, alpha_l
-    key = pix * (len(idx) + 1) + rk                                                     # pixel, then depth order
-    key, perm = torch.sort(key)
-    pix, rk, al = pix[perm], rk[perm], al[perm]
-    lg = torch.log1p(-al)
-    cs = torch.cumsum(lg, 0)
-    start = torch.ones_like(pix, dtype=torch.bool)
-    start[1:] = pix[1:] != pix[:-1]
-    seg = torch.cumsum(start.long(), 0) - 1
-    base = (cs - lg)[start]                                                              # cum sum before segment
-    T = torch.exp(cs - lg - base[seg])                                                   # transmittance before frag
-    w = al * T
-    w = torch.where(T > 1e-4, w, torch.zeros_like(w))
-    g = idx[rk]
-    color.index_add_(1, pix, (colors[g].T * w))
-    acc.index_add_(0, pix, w)
-    dep.index_add_(0, pix, w * z[g])
+    for y0 in range(0, H, band):
+        y1 = min(H, y0 + band)
+        sel_all = idx[(yhi[idx] >= y0) & (ylo[idx] < y1)]
+        if not len(sel_all):
+            continue
+        pix_l, rank_l, alpha_l = [], [], []
+        bk = bucket[sel_all]
+        for key in torch.unique(bk).tolist():
+            sel = sel_all[bk == key]
+            Rx, Ry = _RADII[key // nb], _RADII[key % nb]
+            ox_r = torch.arange(-Rx, Rx + 1, device=dev)
+            oy_r = torch.arange(-Ry, Ry + 1, device=dev)
+            oy, ox = torch.meshgrid(oy_r, ox_r, indexing="ij")
+            ox, oy = ox.reshape(-1), oy.reshape(-1)
+            step = max(1, 1_048_576 // len(ox))
+            for s in range(0, len(sel), step):
+                g = sel[s:s + step]
+                px = torch.floor(u[g])[:, None] + ox[None]
+                py = torch.floor(v[g])[:, None] + oy[None]
+                m = (px >= 0) & (px < W) & (py >= y0) & (py < y1)
+                dx = px + 0.5 - u[g][:, None]
+                dy = py + 0.5 - v[g][:, None]
+                power = -0.5 * (ia[g][:, None] * dx * dx + ic[g][:, None] * dy * dy) - ib[g][:, None] * dx * dy
+                alpha = (opacities[g][:, None] * torch.exp(power.clamp(max=0))).clamp(max=0.99)
+                m &= alpha >= 1 / 255
+                if not m.any():
+                    continue
+                gg = g[:, None].expand_as(m)[m]
+                pix_l.append(((py[m] - y0) * W + px[m]).long())
+                rank_l.append(rank[gg])
+                alpha_l.append(alpha[m])
+        if not pix_l:
+            continue
+        pix = torch.cat(pix_l)
+        rk = torch.cat(rank_l)
+        al = torch.cat(alpha_l)
+        del pix_l, rank_l, alpha_l
+        key = pix * (n_vis + 1) + rk                                                    # pixel, then depth order
+        key, perm = torch.sort(key)
+        del key
+        pix, rk, al = pix[perm], rk[perm], al[perm]
+        del perm
+        lg = torch.log1p(-al)
+        cs = torch.cumsum(lg, 0) - lg                                                   # sum before each fragment
+        start = torch.ones_like(pix, dtype=torch.bool)
+        start[1:] = pix[1:] != pix[:-1]
+        seg = torch.cumsum(start.long(), 0) - 1
+        T = torch.exp(cs - cs[start][seg])                                              # transmittance before frag
+        del cs, lg, seg, start
+        w = torch.where(T > 1e-4, al * T, torch.zeros_like(al))
+        del T, al
+        gi = idx[rk]
+        off = y0 * W
+        color[:, off:off + (y1 - y0) * W].index_add_(1, pix, colors[gi].T * w)
+        acc[off:off + (y1 - y0) * W].index_add_(0, pix, w)
+        dep[off:off + (y1 - y0) * W].index_add_(0, pix, w * z[gi])
+        del pix, rk, w, gi
     return color.view(3, H, W), acc.view(1, H, W), dep.view(1, H, W)
 
 
@@ -248,28 +274,38 @@ def _srgb(lin):
 
 @torch.inference_mode()
 def render_views(gaussians, f_px, W, H, divergence=2.0, convergence=0.5, background=None, need_depth=False,
-                 smooth=None, decay=0.75):
-    """Left and right eye images (3,H,W) 0..1 sRGB; optional center-view disparity map (1,H,W) 0..1 (near = 1).
-    smooth/decay: see stereo_params (video)."""
+                 smooth=None, decay=0.75, eye_size=None, need_eyes=True):
+    """Left and right eye images 0..1 sRGB; optional center-view disparity map (1,h,w) 0..1 (near = 1).
+
+    W, H: the picture's size (3D strength is measured in it). eye_size=(w, h) renders each eye directly at another
+    size — e.g. half width for Half SBS, or a smaller render that is scaled up afterwards — which is much faster
+    than rendering full size and shrinking. smooth/decay: see stereo_params (video)."""
     means = gaussians.mean_vectors[0]
     cov3 = _covariances(gaussians.quaternions[0], gaussians.singular_values[0])
     colors = gaussians.colors[0]
     opac = gaussians.opacities[0]
     baseline, d0, d_near, d_far = stereo_params(gaussians, f_px, W, H, divergence, convergence, smooth, decay)
-    cx, cy = W / 2, H / 2
-    eyes = []
-    for sign in (-1.0, 1.0):                                         # left eye at -b/2, right eye at +b/2
+    ew, eh = eye_size or (W, H)
+    sx, sy = ew / W, eh / H
+    fx, fy = f_px * sx, f_px * sy
+    cx, cy = ew / 2, eh / 2
+    if background is not None and tuple(background.shape[-2:]) != (eh, ew):
+        background = F.interpolate(background[None], size=(eh, ew), mode="bilinear", antialias=True,
+                                   align_corners=False)[0]
+    eyes = [None, None]
+    for i, sign in enumerate((-1.0, 1.0) if need_eyes else ()):       # left eye at -b/2, right eye at +b/2
         t = torch.tensor([-sign * baseline / 2, 0.0, 0.0], device=means.device)
         # parallel off-axis cameras: shift the principal point so depth d0 has zero parallax
-        cxe = cx + sign * f_px * baseline / 2 * d0
-        col, acc, _ = rasterize(means + t, cov3, colors, opac, f_px, f_px, cxe, cy, W, H)
+        cxe = cx + sign * fx * baseline / 2 * d0
+        col, acc, _ = rasterize(means + t, cov3, colors, opac, fx, fy, cxe, cy, ew, eh)
         img = _srgb(col)
         if background is not None:                                   # fill any uncovered pixels
             img = img + (1 - acc.clamp(0, 1)) * background
-        eyes.append(img.clamp(0, 1))
+        eyes[i] = img.clamp(0, 1)
+        del col, acc
     depth = None
     if need_depth:
-        _, acc, dep = rasterize(means, cov3, colors, opac, f_px, f_px, cx, cy, W, H)
+        _, acc, dep = rasterize(means, cov3, colors, opac, fx, fy, cx, cy, ew, eh)
         inv = acc / dep.clamp(min=1e-6)
         depth = ((inv - d_far) / max(d_near - d_far, 1e-6)).clamp(0, 1)
         depth = torch.where(acc > 0.05, depth, torch.zeros_like(depth))
@@ -303,11 +339,15 @@ def compose(layout, left, right, depth=None, image=None):
     return torch.cat([image, d3], dim=2)                             # RGB + Depth
 
 
-def pad_16x9(t):
-    """Black side bars so a narrower-than-16:9 eye becomes 16:9 (same as the video fix)."""
+def pad_16x9(t, new_w=None):
+    """Black side bars so a narrower-than-16:9 eye becomes 16:9 (same as the video fix). new_w: target width
+    (for eyes rendered at half width)."""
     _, H, W = t.shape
-    if W / H >= 16 / 9 - 0.02:
+    if new_w is None:
+        if W / H >= 16 / 9 - 0.02:
+            return t
+        new_w = int(round(H * 16 / 9))
+    if new_w <= W:
         return t
-    new_w = int(round(H * 16 / 9))
     left = (new_w - W) // 2
     return F.pad(t, (left, new_w - W - left, 0, 0))

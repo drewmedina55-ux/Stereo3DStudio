@@ -86,6 +86,12 @@ METHODS = {
     "Grid sample (classic)": "grid_sample",
 }
 
+SHARP_RENDER = {                                # SHARP render size for videos
+    "Fast — 720p (quick tests)": 720,
+    "Balanced — 1080p (recommended)": 1080,
+    "Full — processing size (slowest)": 0,
+}
+
 CODECS = ["libx264", "libx265", "h264_nvenc", "hevc_nvenc", "libopenh264", "utvideo", "ffv1"]
 PRESETS_ENC = ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow",
                "p1", "p2", "p3", "p4", "p5", "p6", "p7"]
@@ -133,6 +139,7 @@ DEFAULTS = {
     "batch_size": 4,
     "low_vram": False,
     "fp16": True,
+    "sharp_render": 1080,           # SHARP on video: render the eyes at most this tall (0 = processing size)
     "max_workers": 0,
     "cuda_stream": False,
     # job
@@ -174,6 +181,10 @@ BUILTIN_PRESETS = {
     "Photos · Pop-out": {"foreground_scale": 1.0,
                          "edge_dilation": 1, "tta": True},
     "Anaglyph glasses": {"layout": "Anaglyph (red/cyan glasses)", "edge_dilation": 1},
+    "Experimental · SHARP 3D scene (Odyssey)": {"method": "sharp", "layout": "Half SBS (Odyssey 3D / 3D TVs)",
+                                                "sharp_render": 1080, "max_height": 1080, "keep_source_fps": False,
+                                                "max_fps": 30.0, "fp16": True, "ema_normalize": True,
+                                                "video_codec": "hevc_nvenc", "enc_preset": "p4"},
 }
 
 

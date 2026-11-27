@@ -230,9 +230,10 @@ behind foreground objects — and Stereo3D Studio films that scene with **two vi
   images as** (left + right, colour + depth) and **Depth map only**. Videos are converted **frame by frame** (every
   frame becomes its own 3D scene) with sound, Processing size, codec, title and the live view as usual — and the
   scene's depth range is smoothed between frames (**Smooth depth between frames**) to keep the 3D steady.
-- **It's slow on video:** every frame is a full 1536-pixel SHARP prediction plus two renders — think seconds per
-  frame, not frames per second. Try **Preview frame** or **Conversion preview** on a clip first, and use 1080p or
-  lower Processing size. Some flicker can remain, since SHARP looks at each frame on its own.
+- **Video takes time:** every frame is a full SHARP prediction plus two renders, so expect seconds per frame.
+  Use the preset **★ Experimental · SHARP 3D scene (Odyssey)** (Half SBS, 1080p, 30 fps, FP16, GPU encoder) and
+  keep **SHARP render** at **Balanced — 1080p**; **Fast — 720p** is about twice as fast for quick tests. Try
+  **Conversion preview** on a clip first. Some flicker can remain, since SHARP looks at each frame on its own.
 - **No compiling:** SHARP's own renderer needs gsplat, which has to compile CUDA code on your PC. Stereo3D Studio
   renders the splats with its own PyTorch renderer instead, so it just works.
 - **Download:** Models → **Apple SHARP — 3D scene method** → accept the license → Download (2.7 GB from Apple).

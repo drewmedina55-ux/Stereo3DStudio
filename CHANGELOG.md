@@ -5,7 +5,11 @@
   Gaussian splats, filmed by two virtual cameras, so edges and revealed areas come from real geometry instead of
   shifted pixels. Works on images, folders and videos (frame by frame, with sound; the depth range is smoothed
   between frames), with 3D strength, Screen plane, all layouts except VR180, the 16:9 side bars, two-file saving,
-  Preview frame and Conversion / Moments preview. It's slow on video — seconds per frame.
+  Preview frame and Conversion / Moments preview.
+- SHARP splat renderer works in strips of the image with tight per-splat footprints: memory stays small and fixed
+  (a full frame used to overflow the graphics card, which made video crawl) and it's more accurate. Each eye is
+  rendered straight at its final size (half width for Half SBS), and **SHARP render** (720p / 1080p / full) caps the
+  render size for video. New preset **Experimental · SHARP 3D scene (Odyssey)**.
 - Stereo3D Studio renders SHARP's splats with its own PyTorch renderer, so nothing has to be compiled.
 - SHARP's weights (2.7 GB, Apple research-use-only license) download in the Models window.
 - **Standard Windows setup wizard** (Stereo3DStudio_v1.4_Setup.exe): per-user install without admin rights, live

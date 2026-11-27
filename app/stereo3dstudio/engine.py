@@ -622,22 +622,52 @@ class Converter:
             raise RuntimeError(f"SHARP doesn't support the “{layout}” layout yet — choose SBS, top-bottom, "
                                "cross-eyed, anaglyph or a depth layout.")
 
-    def _sharp_render(self, net, settings, img, layout, pad16, smooth=None):
-        """(3,H,W) 0..1 picture on the GPU -> SHARP scene -> finished frame in `layout` (3,h,w) 0..1."""
+    def _sharp_render(self, net, settings, img, layout, pad16, smooth=None, cap=0):
+        """(3,H,W) 0..1 picture on the GPU -> SHARP scene -> finished frame in `layout` (3,h,w) 0..1.
+
+        Each eye is rendered straight at the size it ends up in the layout (half width for Half SBS, nothing at
+        all for depth layouts), and with `cap` (SHARP render size, e.g. 720 or 1080) at most that tall, then the
+        finished frame is scaled up. Rendering is SHARP's slow part, so this is where the time is saved."""
         from . import sharp3d as SH
         _, H, W = img.shape
         f_px = SH.focal_px(W, H)
         g = SH.predict(net, img, f_px, half=bool(settings.get("fp16", True)))
-        need_depth = "Depth" in layout
+        depth_layout = "Depth" in layout
+        half_x = layout.startswith(("Half SBS", "Half RGB"))
+        half_y = layout.startswith("Half Top")
+        ew0, eh0 = (W // 2 if half_x else W), (H // 2 if half_y else H)        # eye size in the finished frame
+        pw0 = ew0                                                                  # ... with 16:9 side bars
+        if pad16 and not depth_layout and W / H < 16 / 9 - 0.02:
+            full = int(round(H * 16 / 9))
+            pw0 = full // 2 if half_x else full
+        r = min(1.0, cap / max(eh0, 1)) if cap else 1.0
+        ew, eh = max(16, round(ew0 * r)), max(16, round(eh0 * r))
+        pw = max(ew, round(pw0 * r))
         decay = float(settings.get("ema_decay", 0.75)) if settings.get("ema_normalize", True) else 0.0
         L, R, D = SH.render_views(g, f_px, W, H, float(settings.get("divergence", 2.2)),
-                                  float(settings.get("convergence", 0.45)), background=img, need_depth=need_depth,
-                                  smooth=smooth, decay=decay)
+                                  float(settings.get("convergence", 0.45)), background=img, need_depth=depth_layout,
+                                  smooth=smooth, decay=decay, eye_size=(ew, eh), need_eyes=not depth_layout)
         del g
-        if pad16:
-            L, R = SH.pad_16x9(L), SH.pad_16x9(R)
-        comp_layout = "RGB + Depth" if layout == DEPTH_ONLY else layout   # the live tap keeps the depth half
-        return SH.compose(comp_layout, L, R, depth=D, image=img).clamp(0, 1)
+        if depth_layout:
+            small = img if (eh, ew) == (H, W) else F.interpolate(img[None], size=(eh, ew), mode="bilinear",
+                                                                 antialias=True, align_corners=False)[0]
+            out = SH.compose("RGB + Depth", small, small, depth=D, image=small)      # depth-only keeps the right half
+            final = (eh0, 2 * ew0)
+        else:
+            if pw > ew:
+                L, R = SH.pad_16x9(L, pw), SH.pad_16x9(R, pw)
+            comp = {"Half SBS": "Full SBS", "Half Top": "Full Top"}
+            comp_layout = next((v for k, v in comp.items() if layout.startswith(k)), layout)
+            out = SH.compose(comp_layout, L, R)
+            if comp_layout.startswith(("Full SBS", "Cross")):
+                final = (eh0, 2 * pw0)
+            elif comp_layout.startswith("Full Top"):
+                final = (2 * eh0, pw0)
+            else:
+                final = (eh0, pw0)
+        if tuple(out.shape[-2:]) != final:
+            out = F.interpolate(out[None], size=final, mode="bicubic", align_corners=False)[0]
+        return out.clamp(0, 1)
 
     def _sharp_one(self, net, device, settings, src, output_dir):
         """One picture -> SHARP scene -> eyes -> the same file iw3 would have written (name, layout, format)."""
@@ -689,6 +719,7 @@ class Converter:
             self.on_log(f"Title skipped: {e}")
         pad16 = getattr(args, "pad_mode", None) == "16:9"
         smooth = {}
+        cap = int(settings.get("sharp_render", 1080) or 0)
         dest = path.join(output_dir, _make_output_filename(path.basename(input_path), args, video=True))
 
         def config_callback(metadata):
@@ -705,7 +736,7 @@ class Converter:
             if frame is None:                                   # flush: nothing is buffered
                 return None
             x, _alpha = extract_frame_rgb_alpha(frame, device)
-            out = self._sharp_render(net, settings, x.float(), layout, pad16, smooth)
+            out = self._sharp_render(net, settings, x.float(), layout, pad16, smooth, cap=cap)
             if out.shape[1] % 2 or out.shape[2] % 2:            # encoders need even sizes
                 out = F.pad(out, (0, out.shape[2] % 2, 0, out.shape[1] % 2))
             return out

@@ -1723,6 +1723,12 @@ class MainWindow(QMainWindow):
         for label, v in S.METHODS.items():
             self.cb_method.addItem(label, v)
         self.cb_method.currentIndexChanged.connect(lambda *_: self._method_changed())
+        self.cb_sharp = self._row(g, "SHARP render", QComboBox(),
+                                  "SHARP only, videos: how big the two eyes are rendered before the frame is scaled "
+                                  "to your Processing size. Rendering is SHARP's slow part — 720p is about twice as "
+                                  "fast as 1080p. SHARP's own detail is about 768 pixels, so 1080p loses very little.")
+        for label, v in S.SHARP_RENDER.items():
+            self.cb_sharp.addItem(label, v)
         self.cb_synth = self._row(g, "Synthesize", QComboBox(),
                                   "Both = artifacts split between eyes. Left/Right = one eye stays original.")
         for label, v in (("Both eyes", "both"), ("Right eye only", "right"), ("Left eye only", "left")):
@@ -1983,6 +1989,7 @@ class MainWindow(QMainWindow):
         self._set_combo_data(self.cb_model, s["depth_model"])
         self._set_combo_data(self.cb_res, s["resolution"])
         self._set_combo_data(self.cb_method, s["method"])
+        self._set_combo_data(self.cb_sharp, s.get("sharp_render", 1080))
         self._method_changed()
         self.sl_div.setValue(s["divergence"])
         self.sl_conv.setValue(s["convergence"])
@@ -2044,6 +2051,7 @@ class MainWindow(QMainWindow):
             "depth_model": self.cb_model.currentData(),
             "resolution": self.cb_res.currentData(),
             "method": self.cb_method.currentData(),
+            "sharp_render": self.cb_sharp.currentData(),
             "divergence": round(self.sl_div.value(), 3),
             "convergence": round(self.sl_conv.value(), 3),
             "foreground_scale": round(self.sl_fg.value(), 2),
@@ -2126,6 +2134,7 @@ class MainWindow(QMainWindow):
         """SHARP builds its own 3D scene, so the depth model menu doesn't apply to it."""
         sharp = self.cb_method.currentData() == "sharp"
         self.cb_model.setEnabled(not sharp)
+        self.cb_sharp.setEnabled(sharp)
         self.cb_model.setToolTip("Not used by SHARP — it predicts its own 3D scene from the picture." if sharp else "")
         self.cb_method.setToolTip(
             "SHARP (Apple): turns each picture into a 3D scene of Gaussian splats and films it with two virtual "
