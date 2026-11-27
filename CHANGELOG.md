@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.3
+## 1.4
 - **SHARP 3D scene (experimental)** — a new stereo method using Apple's SHARP: each picture becomes a 3D scene of
   Gaussian splats, filmed by two virtual cameras, so edges and revealed areas come from real geometry instead of
   shifted pixels. Works on images, folders and videos (frame by frame, with sound; the depth range is smoothed
@@ -8,7 +8,7 @@
   Preview frame and Conversion / Moments preview. It's slow on video — seconds per frame.
 - Stereo3D Studio renders SHARP's splats with its own PyTorch renderer, so nothing has to be compiled.
 - SHARP's weights (2.7 GB, Apple research-use-only license) download in the Models window.
-- **Standard Windows setup wizard** (Stereo3DStudio_v1.3_Setup.exe): per-user install without admin rights, live
+- **Standard Windows setup wizard** (Stereo3DStudio_v1.4_Setup.exe): per-user install without admin rights, live
   setup log, Start-menu entry and uninstall from Windows Settings → Apps. Updating into the same folder always keeps
   your downloaded models; the uninstaller asks before deleting them.
 

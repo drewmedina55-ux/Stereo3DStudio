@@ -1,13 +1,13 @@
 ; Stereo3D Studio - Windows setup wizard (NSIS 3, Modern UI 2)
 ;
-; Build (Windows or Linux):  makensis -DVERSION=1.3 -DSRC=<staged package folder> installer/Stereo3DStudio.nsi
+; Build (Windows or Linux):  makensis -DVERSION=1.4 -DSRC=<staged package folder> installer/Stereo3DStudio.nsi
 ; The staged folder is the release package WITHOUT a models folder. The wizard copies the app, then runs
 ; installer\install.ps1 unattended (Python + PyTorch for this PC's GPU) and shows its output live.
 ; The models folder is never overwritten or removed by an install or update.
 
 Unicode true
 !ifndef VERSION
-  !define VERSION "1.3"
+  !define VERSION "1.4"
 !endif
 !ifndef SRC
   !define SRC ".."
