@@ -1,9 +1,15 @@
-Stereo3D Studio 1.0
+Stereo3D Studio 1.3
 2D -> 3D image & video converter with NVIDIA GPU acceleration
 Created by Drew Medina - https://drewmedina.com
 Made with Claude Opus 5.5
 
 INSTALL
+  Setup wizard (Stereo3DStudio_v1.3_Setup.exe): just run it and follow the
+  steps. To update, run the newer setup into the same folder - your
+  downloaded models are always kept. To repair, run the setup again.
+  Uninstall from Windows Settings > Apps (it asks before deleting models).
+
+  Zip package:
   1. Extract this whole folder where you want the app to live
      (e.g. C:\Apps\Stereo3DStudio). Don't move it after installing -
      if you do, just run the installer again.

@@ -1,6 +1,8 @@
 # Stereo3D Studio installer - sets up the GPU runtime next to Stereo3DStudio.exe
 # Safe to re-run: it repairs or rebuilds the runtime.
-param([switch]$Cpu, [switch]$NoModels, [switch]$NoShortcuts)
+# The setup wizard runs it with -Unattended -ProgressFile <file>; the models folder is never touched.
+param([switch]$Cpu, [switch]$NoModels, [switch]$NoShortcuts, [switch]$Unattended,
+      [ValidateSet("ask", "yes", "no")][string]$LargeModel = "ask", [string]$ProgressFile = "")
 
 $ErrorActionPreference = "Continue"
 $ProgressPreference = "SilentlyContinue"
@@ -16,7 +18,11 @@ $VisionVer = "0.29.1"
 
 Start-Transcript -Path $LogFile -Force | Out-Null
 
-function Step($msg) { Write-Host ""; Write-Host "==> $msg" -ForegroundColor Cyan }
+function Report($pct, $msg) {
+    # progress for the setup wizard: "percent|text" (or DONE|... / FAIL|...)
+    if ($ProgressFile) { try { Set-Content -Path $ProgressFile -Value "$pct|$msg" -Encoding UTF8 -ErrorAction Stop } catch {} }
+}
+function Step($msg, $pct = -1) { Write-Host ""; Write-Host "==> $msg" -ForegroundColor Cyan; if ($pct -ge 0) { Report $pct $msg } }
 function Ok($msg) { Write-Host "    $msg" -ForegroundColor Green }
 function Warn($msg) { Write-Host "    $msg" -ForegroundColor Yellow }
 function Run-Logged($File, [string[]]$Arguments) {
@@ -32,6 +38,7 @@ function Run-Logged($File, [string[]]$Arguments) {
 function Fail($msg) {
     Write-Host ""; Write-Host "INSTALL FAILED: $msg" -ForegroundColor Red
     Write-Host "Details were saved to: $LogFile" -ForegroundColor Red
+    Report "FAIL" $msg
     Stop-Transcript | Out-Null
     exit 1
 }
@@ -54,7 +61,7 @@ Remove-Item Env:PYTHONHOME -ErrorAction SilentlyContinue
 Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
 
 # ---------------------------------------------------------------- 1. GPU
-Step "Checking your NVIDIA GPU"
+Step "Checking your NVIDIA GPU" 3
 $Flavor = "cpu"
 $smi = Get-Command nvidia-smi -ErrorAction SilentlyContinue
 if (-not $smi) {
@@ -98,7 +105,7 @@ if ($Cpu) {
 Ok "Runtime flavor: $Flavor"
 
 # ---------------------------------------------------------------- 2. uv (python + package manager)
-Step "Getting the Python package manager (uv)"
+Step "Getting the Python package manager (uv)" 8
 New-Item -ItemType Directory -Force -Path $Tools | Out-Null
 $uv = Join-Path $Tools "uv.exe"
 if (-not (Test-Path $uv)) {
@@ -113,7 +120,7 @@ if (-not (Test-Path $uv)) { Fail "uv.exe missing after download." }
 Ok (& $uv --version)
 
 # ---------------------------------------------------------------- 3. runtime
-Step "Creating the Python 3.12 runtime"
+Step "Creating the Python 3.12 runtime" 12
 if (Test-Path $Runtime) {
     Warn "Removing previous runtime..."
     Remove-Item -Recurse -Force $Runtime
@@ -122,7 +129,7 @@ if (Test-Path $Runtime) {
 if ($LASTEXITCODE -ne 0) { Fail "Could not create the Python runtime." }
 $py = Join-Path $Runtime "Scripts\python.exe"
 
-Step "Installing PyTorch ($Flavor) - this is a large download (about 2.5 GB for GPU)"
+Step "Installing PyTorch ($Flavor) - a large download, about 2.5 GB for GPU" 18
 if ($Flavor -eq "cpu") {
     & $uv pip install --python $py "torch==$TorchVer" "torchvision==$VisionVer" --index-url "https://download.pytorch.org/whl/cpu"
 } else {
@@ -134,7 +141,7 @@ if ($LASTEXITCODE -ne 0) {
     if ($LASTEXITCODE -ne 0) { Fail "PyTorch install failed." }
 }
 
-Step "Installing the 3D engine and interface packages"
+Step "Installing the 3D engine and interface packages" 60
 $req = Join-Path $Root "engine\requirements.txt"
 & $uv pip install --python $py -r $req "PySide6>=6.7,<6.13" "diffusers>=0.32" "peft>=0.14" "transformers>=4.46" "sentencepiece" "protobuf" "bitsandbytes>=0.45"
 if ($LASTEXITCODE -ne 0) { Fail "Package install failed." }
@@ -143,7 +150,7 @@ $site = Join-Path $Runtime "Lib\site-packages"
 Set-Content -Path (Join-Path $site "stereo3dstudio.pth") -Encoding ASCII -Value @((Join-Path $Root "app"), (Join-Path $Root "engine"))
 
 # ---------------------------------------------------------------- 4. verify GPU
-Step "Testing GPU acceleration"
+Step "Testing GPU acceleration" 78
 $gpuCode = Run-Logged $py @((Join-Path $PSScriptRoot "prefetch.py"), "check")
 if ($gpuCode -eq 0) { Ok "CUDA is working." }
 elseif ($Flavor -ne "cpu") { Warn "PyTorch installed but CUDA did not start. Update your NVIDIA driver and re-run setup." }
@@ -158,17 +165,20 @@ if (-not $NoModels) {
         Write-Host ""
         Write-Host "  The default depth model, Depth Anything V2 Large (1.3 GB), is licensed" -ForegroundColor White
         Write-Host "  CC BY-NC 4.0: free for personal / non-commercial use only." -ForegroundColor White
-        $ans = Read-Host "  Accept the license and download it now? [Y/n]"
-        if ($ans -eq "" -or $ans -match "^[Yy]") { $modelArgs += "large" }
+        if ($LargeModel -eq "ask" -and -not $Unattended) {
+            $ans = Read-Host "  Accept the license and download it now? [Y/n]"
+            $LargeModel = $(if ($ans -eq "" -or $ans -match "^[Yy]") { "yes" } else { "no" })
+        }
+        if ($LargeModel -eq "yes") { $modelArgs += "large" }
         else { Warn "Skipped - you can download it later from the Models button." }
     }
-    Step "Pre-downloading the default models (a few minutes for the 1.3 GB model)"
+    Step "Downloading the default depth models (a few minutes for the 1.3 GB model)" 82
     $mc = Run-Logged $py $modelArgs
     if ($mc -ne 0) { Warn "Model pre-download failed - Stereo3D Studio will download them on first use." }
 }
 
 # ---------------------------------------------------------------- 6. launcher + shortcuts
-Step "Finishing up"
+Step "Finishing up" 93
 $exe = Join-Path $Root "Stereo3DStudio.exe"
 $csc = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 if (Test-Path $csc) {
@@ -177,7 +187,7 @@ if (Test-Path $csc) {
     if ($cc -eq 0 -and (Test-Path $built)) { Move-Item -Force $built $exe; Ok "Launcher compiled on this PC" }
 }
 
-Step "Test-starting Stereo3D Studio"
+Step "Test-starting Stereo3D Studio" 96
 $st = Run-Logged $py @("-X", "utf8", "-m", "stereo3dstudio", "--selftest")
 if ($st -eq 0) { Ok "Stereo3D Studio starts correctly." }
 else { Warn "The start test failed (details above). Please send install_log.txt." }
@@ -216,5 +226,6 @@ Write-Host ""
 Write-Host "  Stereo3D Studio $Version is installed." -ForegroundColor Green
 if ($gpuCode -ne 0) { Write-Host "  Note: running without GPU acceleration (see messages above)." -ForegroundColor Yellow }
 Write-Host "  Launch it from the Desktop shortcut or Stereo3DStudio.exe." -ForegroundColor White
+Report "DONE" $(if ($gpuCode -ne 0) { "Installed without GPU acceleration - see install_log.txt" } else { "Installed" })
 Stop-Transcript | Out-Null
 exit 0
