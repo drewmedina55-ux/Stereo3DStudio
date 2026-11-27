@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.1
+
+- **SHARP is several seconds faster per frame.** Apple's SHARP code sent all ~1.2 million splats to the CPU every frame
+  to take their shapes apart (a float64 SVD), and the renderer then put the same shapes back together. Stereo3D Studio
+  now keeps the splat shapes on the GPU and skips that step entirely — identical results. (Thanks to jerg-git's
+  ComfyUI-SHARP-VR-Video v0.2.0 for pointing at this step.)
+- cuDNN picks the fastest kernels for SHARP's fixed 1536×1536 input.
+
 ## 1.4
 - **SHARP 3D scene (experimental)** — a new stereo method using Apple's SHARP: each picture becomes a 3D scene of
   Gaussian splats, filmed by two virtual cameras, so edges and revealed areas come from real geometry instead of

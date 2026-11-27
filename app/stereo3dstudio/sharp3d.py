@@ -20,6 +20,7 @@ import types
 from os import path
 
 import torch
+from types import SimpleNamespace
 import torch.nn.functional as F
 
 from iw3.hub_dir import HUB_MODEL_DIR
@@ -98,7 +99,7 @@ def focal_px(width, height, focal_mm=DEFAULT_FOCAL_MM):
 def predict(net, image, f_px, half=False):
     """image: (3, H, W) float 0..1 on the model's device -> Gaussians3D in camera space (OpenCV axes).
     half=True runs the network in FP16 on the GPU (about twice as fast; the ComfyUI SHARP nodes default to it)."""
-    from sharp.utils.gaussians import Gaussians3D, unproject_gaussians
+    from sharp.utils.gaussians import Gaussians3D, get_unprojection_matrix
     _, H, W = image.shape
     dev = image.device
     x = F.interpolate(image[None].float(), size=(INTERNAL, INTERNAL), mode="bilinear", align_corners=True)
@@ -109,7 +110,14 @@ def predict(net, image, f_px, half=False):
                      device=dev, dtype=torch.float32)
     K[0] *= INTERNAL / W
     K[1] *= INTERNAL / H
-    return unproject_gaussians(g_ndc, torch.eye(4, device=dev), K, (INTERNAL, INTERNAL))
+    # Same result as sharp's unproject_gaussians, but the splat shapes stay as covariance matrices on the GPU.
+    # (unproject_gaussians decomposes every covariance with an SVD on the CPU in float64 — several seconds per frame
+    # for ~1.2M splats — only for the renderer to rebuild the same matrices right away.)
+    M = get_unprojection_matrix(torch.eye(4, device=dev), K, (INTERNAL, INTERNAL))[:3]
+    A, o = M[:3, :3], M[:3, 3]
+    cov = A @ _covariances(g_ndc.quaternions[0], g_ndc.singular_values[0]) @ A.T
+    return SimpleNamespace(mean_vectors=g_ndc.mean_vectors @ A.T + o, covariances=cov[None],
+                           colors=g_ndc.colors, opacities=g_ndc.opacities)
 
 
 # ======================================================================================= renderer
@@ -281,7 +289,8 @@ def render_views(gaussians, f_px, W, H, divergence=2.0, convergence=0.5, backgro
     size — e.g. half width for Half SBS, or a smaller render that is scaled up afterwards — which is much faster
     than rendering full size and shrinking. smooth/decay: see stereo_params (video)."""
     means = gaussians.mean_vectors[0]
-    cov3 = _covariances(gaussians.quaternions[0], gaussians.singular_values[0])
+    cov3 = (gaussians.covariances[0] if hasattr(gaussians, "covariances")
+            else _covariances(gaussians.quaternions[0], gaussians.singular_values[0]))
     colors = gaussians.colors[0]
     opac = gaussians.opacities[0]
     baseline, d0, d_near, d_far = stereo_params(gaussians, f_px, W, H, divergence, convergence, smooth, decay)

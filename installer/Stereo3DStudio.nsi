@@ -7,7 +7,7 @@
 
 Unicode true
 !ifndef VERSION
-  !define VERSION "1.4"
+  !define VERSION "1.4.1"
 !endif
 !ifndef SRC
   !define SRC ".."
@@ -28,7 +28,10 @@ ShowInstDetails show
 ShowUninstDetails show
 BrandingText "${APP} ${VERSION} — by Drew Medina"
 
-VIProductVersion "${VERSION}.0.0"
+!ifndef VIVERSION
+  !define VIVERSION "${VERSION}.0.0"   ; Windows wants four numbers: pass -DVIVERSION=1.4.1.0 for three-part versions
+!endif
+VIProductVersion "${VIVERSION}"
 VIAddVersionKey "ProductName" "${APP}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "FileVersion" "${VERSION}"

@@ -58,7 +58,8 @@ jobs:
           Remove-Item -Recurse -Force "$stage/models", "$stage/Install Stereo3D Studio.bat", "$stage/Uninstall Stereo3D Studio.bat", "$stage/installer/Stereo3DStudio.nsi" -ErrorAction SilentlyContinue
           $makensis = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
           if (-not (Test-Path $makensis)) { choco install nsis -y --no-progress | Out-Null }
-          & $makensis /V2 "/DVERSION=$v" "/DSRC=$stage" "installer\Stereo3DStudio.nsi"
+          $vi = (($v.Split('.') + @('0', '0', '0'))[0..3]) -join '.'
+          & $makensis /V2 "/DVERSION=$v" "/DVIVERSION=$vi" "/DSRC=$stage" "installer\Stereo3DStudio.nsi"
           Move-Item "installer\$name`_Setup.exe" "out\$name`_Setup.exe"
           Get-Item "out/$name`_Setup.exe" | Format-List Name, Length
 
