@@ -229,6 +229,7 @@ built to use it for 3D conversion.
 single-image view-synthesis model. Instead of shifting pixels along a depth map like the other methods, it predicts a
 small **3D scene of Gaussian splats** from the picture — about a million of them, in two layers, so there is something
 behind foreground objects — and Stereo3D Studio films that scene with **two virtual cameras**, one per eye.
+Thanks to **[ComfyUI-SHARP-VR-Video](https://github.com/jerg-git/ComfyUI-SHARP-VR-Video) by jerg-git**, which showed SHARP making stereo 3D and VR video and inspired this mode.
 
 - **Why it's different:** edges and the areas revealed behind objects come from real geometry, so there's no
   stretching or smeared fill-in around people and objects.
@@ -391,6 +392,7 @@ None of this would exist without it. Thank you!
 - Created by **Drew Medina** — [drewmedina.com](https://drewmedina.com)
 - Made with **Claude Opus 5.5**
 - Moments preview idea: **[u/pagineinternet](https://www.reddit.com/user/pagineinternet/)** — thank you!
+- SHARP 3D mode idea, and SHARP on video frame by frame: **[ComfyUI-SHARP-VR-Video](https://github.com/jerg-git/ComfyUI-SHARP-VR-Video) by jerg-git** — thank you!
 - 3D engine: **iw3 / nunif** by [nagadomi](https://github.com/nagadomi/nunif) (MIT License)
 - Depth models by their respective authors (Lotus and Lotus-2 by EnVision-Research, Apple SHARP, Apple Depth Pro 2, Depth
   Anything, Video Depth Anything, Distill Any Depth, Depth Pro, ZoeDepth) — see
