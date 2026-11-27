@@ -45,6 +45,11 @@ for _k, _size in (("DepthPro2_S", "97 MB"), ("DepthPro2_B", "386 MB"), ("DepthPr
     from .depthpro2 import DOWNLOAD_URLS as _DP2_URLS
     CATALOG[_k] = (_DP2_URLS[_k], _DP2_PAGE, _APPLE, _size)
 
+# Apple SHARP (3D scene stereo method) — not a depth model, so it has its own file path
+from .sharp3d import MODEL_URL as _SHARP_URL, MODEL_PAGE as _SHARP_PAGE, MODEL_FILE as _SHARP_FILE
+CATALOG["SHARP_3D"] = (_SHARP_URL, _SHARP_PAGE, _APPLE, "2.7 GB")
+EXTRA_PATHS = {"SHARP_3D": _SHARP_FILE}
+
 # models that share one checkpoint file
 ALIASES = {
     "VDA_Stream_B": "VDA_B", "VDA_Stream_L": "VDA_L",
@@ -61,6 +66,8 @@ def needs_manual(model_type):
 
 
 def target_path(model_type):
+    if model_type in EXTRA_PATHS:
+        return EXTRA_PATHS[model_type]
     from iw3.base_depth_model import BaseDepthModel
     cls = BaseDepthModel.get_depth_model_class(model_type)
     return cls.get_model_path(model_type) if cls else None

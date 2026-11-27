@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3
+- **SHARP 3D scene (experimental)** — a new stereo method using Apple's SHARP: each picture becomes a 3D scene of
+  Gaussian splats, filmed by two virtual cameras, so edges and revealed areas come from real geometry instead of
+  shifted pixels. Images (and folders of images) for now; works with 3D strength, Screen plane, all image layouts
+  except VR180, the 16:9 side bars and two-file saving. Preview frame works on video frames too.
+- Stereo3D Studio renders SHARP's splats with its own PyTorch renderer, so nothing has to be compiled.
+- SHARP's weights (2.7 GB, Apple research-use-only license) download in the Models window.
+
 ## 1.2
 - **Lotus depth** (lotus-depth-d-v2-0-disparity, the model behind kijai's ComfyUI-Lotus): very fine, crisp depth
   for photos and stills, and it works well for video too (slower). Downloads automatically on first use

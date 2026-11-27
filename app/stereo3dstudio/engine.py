@@ -7,6 +7,7 @@ import traceback
 from os import path
 
 import torch
+import torch.nn.functional as F
 
 from iw3 import models  # noqa: F401  (registers model classes)
 from . import depthpro2  # noqa: F401  (registers Apple Depth Pro 2)
@@ -555,6 +556,9 @@ class Converter:
                 if self.stop_event.is_set():
                     stopped = True
                     break
+                if (opts.get("sizzle") or opts.get("moments")) and settings.get("method") == "sharp":
+                    self.on_item(index, "Error", "SHARP works on images for now — previews of videos aren't available")
+                    continue
                 if opts.get("sizzle") or opts.get("moments"):
                     total_clip = opts.get("sizzle") or (0, 0)
                     stopped = self._run_sizzle(index, input_path, settings, output_dir, *total_clip,
@@ -566,6 +570,18 @@ class Converter:
                 t0 = time.time()
                 try:
                     os.makedirs(output_dir, exist_ok=True)
+                    if settings.get("method") == "sharp":
+                        self._convert_sharp(index, settings, input_path, output_dir)
+                        if not self.stop_event.is_set():
+                            self._finish_images(settings, input_path, output_dir, t0)
+                        if self.stop_event.is_set():
+                            self.on_item(index, "Stopped", "")
+                            stopped = True
+                            break
+                        dt = time.time() - t0
+                        self.on_item(index, "Done", f"{dt:.1f}s")
+                        self.on_log(f"✔ {path.basename(input_path)} — {dt:.1f}s")
+                        continue
                     args = self._prepare(settings, input_path, output_dir)
                     if not self._depth_model.loaded():
                         self.on_log(f"Loading depth model {args.depth_model} (first run downloads it)…")
@@ -591,7 +607,85 @@ class Converter:
             _LIVE["sink"] = None
             _LIVE["title"] = None
             _LIVE["depth_only"] = False
+            if settings.get("method") == "sharp":
+                from . import sharp3d
+                sharp3d.unload()                       # give the GPU memory back
             self.on_done(stopped)
+
+    # ---- Apple SHARP (3D Gaussian scene) — images
+    def _sharp_device(self, settings):
+        gpu = int(settings.get("gpu", 0) or 0)
+        if torch.cuda.is_available() and gpu >= 0:
+            return torch.device(f"cuda:{gpu}")
+        return torch.device("cpu")
+
+    def _sharp_one(self, net, device, settings, src, output_dir):
+        """One picture -> SHARP scene -> eyes -> the same file iw3 would have written (name, layout, format)."""
+        from PIL import Image, ImageOps
+        from torchvision.transforms import functional as TF
+        from . import sharp3d as SH
+        s_eff = effective_settings(settings, src)
+        layout = s_eff["layout"]
+        if not SH.layout_supported(layout):
+            raise RuntimeError(f"SHARP doesn't support the “{layout}” layout yet — choose SBS, top-bottom, "
+                               "cross-eyed, anaglyph or a depth layout.")
+        args = build_args(settings, src, output_dir)
+        args.depth_model = "SHARP"
+        _LIVE["depth_only"] = layout == DEPTH_ONLY
+        with Image.open(src) as im:
+            im = ImageOps.exif_transpose(im).convert("RGB")
+        W0, H0 = im.size
+        scale = min(1.0, 3840 / max(W0, H0))                  # render at most 4K on the long side
+        W, H = max(16, round(W0 * scale)), max(16, round(H0 * scale))
+        img = TF.to_tensor(im.resize((W, H), Image.LANCZOS) if scale < 1 else im).to(device)
+        f_px = SH.focal_px(W, H)
+        g = SH.predict(net, img, f_px)
+        if self.stop_event.is_set():
+            return None
+        need_depth = "Depth" in layout
+        L, R, D = SH.render_views(g, f_px, W, H, float(settings.get("divergence", 2.2)),
+                                  float(settings.get("convergence", 0.45)), background=img, need_depth=need_depth)
+        if getattr(args, "pad_mode", None) == "16:9":
+            L, R = SH.pad_16x9(L), SH.pad_16x9(R)
+        comp_layout = "RGB + Depth" if layout == DEPTH_ONLY else layout
+        out = SH.compose(comp_layout, L, R, depth=D, image=img).clamp(0, 1).cpu()
+        if scale < 1 and out.shape[-1] > 0:                     # back to the source size
+            k = 1 / scale
+            out = F.interpolate(out[None], size=(round(out.shape[1] * k), round(out.shape[2] * k)),
+                                mode="bicubic", align_corners=False)[0].clamp(0, 1)
+        dest = path.join(output_dir, _make_output_filename(src, args, video=False))
+        _iw3_utils.save_tensor_image(out, dest, format=args.format)
+        return dest
+
+    def _convert_sharp(self, index, settings, input_path, output_dir):
+        from . import sharp3d as SH
+        kind = classify(input_path)
+        if kind == "Video":
+            raise RuntimeError("SHARP is for images for now (every frame is a full 3D scene) — skipped. "
+                               "Use another method for videos.")
+        if kind == "Folder":
+            exts = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff")
+            walker = os.walk(input_path) if settings.get("recursive") else [(input_path, [], os.listdir(input_path))]
+            files = sorted(path.join(r, f) for r, _d, fs in walker for f in fs if f.lower().endswith(exts))
+        else:
+            files = [input_path]
+        device = self._sharp_device(settings)
+        if SH._MODEL["net"] is None:
+            self.on_log(f"Loading Apple SHARP on {device}…")
+        net = SH.load(device)
+        self.on_log(f"▶ {path.basename(input_path)} (SHARP 3D scene)")
+        for i, src in enumerate(files):
+            if self.stop_event.is_set():
+                return
+            if len(files) > 1:
+                self.on_item(index, "Working", f"SHARP {i + 1} / {len(files)}: {path.basename(src)}")
+            try:
+                dest = self._sharp_one(net, device, settings, src, output_dir)
+            except torch.cuda.OutOfMemoryError:
+                torch.cuda.empty_cache()
+                raise RuntimeError("The GPU ran out of memory for SHARP. Close other GPU apps or try a smaller image.")
+            if dest:
+                self.on_log(f"   saved {path.basename(dest)}")
 
     # ---- conversion preview (sizzle reel)
     def _finish_images(self, settings, input_path, output_dir, t0):
@@ -794,6 +888,18 @@ class Converter:
         s = dict(settings)
         s["layout"] = "Full SBS (VR players, double width)"   # preview always renders full SBS
         result_dir = path.join(out_dir, "result")
+        if s.get("method") == "sharp":                         # SHARP previews any image or video frame
+            from PIL import Image
+            from . import sharp3d as SH
+            device = self._sharp_device(s)
+            net = SH.load(device)
+            s["image_output"] = "single"
+            os.makedirs(result_dir, exist_ok=True)
+            dest = self._sharp_one(net, device, s, src, result_dir)
+            _LIVE["depth_only"] = False
+            im = Image.open(dest)
+            im.load()
+            return im
         args = self._prepare(s, src, result_dir, preview=True)
         self.stop_event.clear()
         iw3_main(args)

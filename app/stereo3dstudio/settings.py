@@ -43,6 +43,7 @@ DEPTH_MODEL_LABELS = {
     "DepthPro_S": "Apple Depth Pro · Small",
     "Lotus_D": "Lotus Depth (sharpest detail, images)",
     "Lotus2_D": "Lotus-2 (experimental · images only · very slow)",
+    "SHARP_3D": "Apple SHARP — 3D scene method (experimental · images)",
     "DepthPro2_S": "Apple Depth Pro 2 · Small (fast, stable video)",
     "DepthPro2_B": "Apple Depth Pro 2 · Base (stable video)",
     "DepthPro2_L": "Apple Depth Pro 2 · Large (sharp, stable video)",
@@ -82,6 +83,7 @@ METHODS = {
     "Forward + inpaint": "forward_inpaint",
     "Backward": "backward",
     "Grid sample (classic)": "grid_sample",
+    "SHARP 3D scene (experimental · Apple, images)": "sharp",
 }
 
 CODECS = ["libx264", "libx265", "h264_nvenc", "hevc_nvenc", "libopenh264", "utvideo", "ffv1"]

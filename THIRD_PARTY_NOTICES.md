@@ -6,6 +6,7 @@
 |---|---|---|
 | nunif / iw3 by nagadomi | `engine/` (unmodified snapshot, commit in `engine/ENGINE_VERSION.txt`) | MIT — `engine/LICENSE`; code nunif itself borrows is listed in `engine/NOTICE` |
 
+| SHARP by Apple | `thirdparty/sharp` (unmodified, commit in `thirdparty/SHARP_VERSION.txt`) | Apple sample code license — `thirdparty/sharp_licenses/LICENSE`, acknowledgements in `ACKNOWLEDGEMENTS` |
 | Depth Pro 2 by Apple | `thirdparty/depth_pro_2` (unmodified, commit in `thirdparty/DEPTH_PRO_2_VERSION.txt`) | Apple sample code license — `thirdparty/depth_pro_2_licenses/LICENSE`, acknowledgements in `ACKNOWLEDGEMENTS` |
 
 ## Downloaded by the installer (not redistributed here)
@@ -19,6 +20,7 @@
 | PyAV, FFmpeg libraries | BSD / LGPL |
 | diffusers, transformers, peft (Hugging Face) — used to run Lotus / Lotus-2 | Apache 2.0 |
 | bitsandbytes — 4-bit Lotus-2 | MIT |
+| plyfile — used by SHARP's code | GPL-3.0 (installed as a separate package, not bundled) |
 | Other Python packages from `engine/requirements.txt` | their respective licenses |
 
 ## Depth models (downloaded on first use or from the Models window)
@@ -36,6 +38,7 @@ No model weights are included in this repository or in release packages.
 | Empty-prompt text embedding for Lotus (from kijai/ComfyUI-Lotus, downloaded on first use) | see the ComfyUI-Lotus repository |
 | Lotus-2 depth weights (EnVision-Research, set up by the user) | Apache 2.0 |
 | FLUX.1-dev by Black Forest Labs (base model for Lotus-2, downloaded by the user with their own Hugging Face access) | **FLUX.1 [dev] Non-Commercial License** |
+| Apple SHARP (3D scene method) | **Apple Machine Learning Research Model License — research use only, non-commercial** (`thirdparty/sharp_licenses/LICENSE_MODEL`) |
 | Apple Depth Pro 2 (S / B / L / H+) | **Apple Machine Learning Research Model License — research use only, non-commercial** (`thirdparty/depth_pro_2_licenses/LICENSE_MODEL`) |
 | Depth Anything V3, Depth Pro, ZoeDepth and others | see each model's page |
 | iw3 stereo / inpaint / anti-aliasing models (nagadomi) | MIT |

@@ -51,6 +51,8 @@ Source footage: [Women Holding Lighted Candles](https://www.pexels.com/video/wom
 - **Drag & drop queue** for videos, images and whole folders, with thumbnails; finished items leave the queue.
 - **Odyssey 3D presets** — Half SBS output, Depth Anything V2 Large, MLBW + inpaint stereo, tuned for 16 GB GPUs.
 - **Every 3D format**: Half / Full SBS, top-bottom, VR180, cross-eyed, anaglyph, RGB + depth — see [3D output modes](#3d-output-modes).
+- **🧪 SHARP 3D scene (experimental)** — Apple's SHARP turns a picture into a real 3D scene and films it with two
+  virtual cameras. See [SHARP](#-sharp-3d-scene-experimental).
 - **🆕 Depth map creator** — new **Depth map only** layout and two-file image saving (left + right, or colour + depth).
   See [Depth maps & image files](#-depth-maps--image-files).
 - **🆕 Lotus depth** — diffusion-based depth with very fine, crisp detail. Made for images, and works well for video
@@ -212,6 +214,29 @@ built to use it for 3D conversion.
 > license yourself. Apple's Depth Pro 2 code is bundled unmodified in `thirdparty/depth_pro_2` under Apple's license
 > (see `thirdparty/depth_pro_2_licenses`).
 
+## 🧪 SHARP 3D scene (experimental)
+
+[**SHARP**](https://github.com/apple/ml-sharp) ([paper](https://arxiv.org/abs/2512.10685) ·
+[examples](https://apple.github.io/ml-sharp/) · [weights](https://huggingface.co/apple/Sharp)) is Apple's
+single-image view-synthesis model. Instead of shifting pixels along a depth map like the other methods, it predicts a
+small **3D scene of Gaussian splats** from the picture — about a million of them, in two layers, so there is something
+behind foreground objects — and Stereo3D Studio films that scene with **two virtual cameras**, one per eye.
+
+- **Why it's different:** edges and the areas revealed behind objects come from real geometry, so there's no
+  stretching or smeared fill-in around people and objects.
+- **How to use it:** Settings → 3D → Stereo generation → **Method → SHARP 3D scene**. The depth model menu greys out
+  (SHARP brings its own depth). **3D strength** and **Screen plane** work exactly as with the other methods.
+- **Images for now** — single pictures and folders. It works with all image layouts except VR180, the 16:9 side bars,
+  **Save images as** (left + right, colour + depth) and **Depth map only**. **Preview frame** also works on video
+  frames, so you can see what a scene would look like. Videos in the queue are skipped.
+- **No compiling:** SHARP's own renderer needs gsplat, which has to compile CUDA code on your PC. Stereo3D Studio
+  renders the splats with its own PyTorch renderer instead, so it just works.
+- **Download:** Models → **Apple SHARP — 3D scene method** → accept the license → Download (2.7 GB from Apple).
+
+> **License:** SHARP's weights are under the **Apple Machine Learning Research Model License — research use only,
+> non-commercial**. They aren't included; you download them from Apple and accept the license yourself. Apple's SHARP
+> code is bundled unmodified in `thirdparty/sharp` under Apple's license (see `thirdparty/sharp_licenses`).
+
 ## 🆕 Lotus depth
 
 [**Lotus**](https://github.com/EnVision-Research/Lotus) ([paper](https://arxiv.org/abs/2409.18124)) by
@@ -311,6 +336,7 @@ on a Windows runner (including the launcher EXE) and publishes it as release `v<
 | Path | What it is |
 |---|---|
 | `app/stereo3dstudio/` | The application: UI (PySide6), engine bridge, model manager, conversion-preview reel, moments preview, Depth Pro 2 integration, title overlay |
+| `thirdparty/sharp/` | Unmodified copy of Apple's [SHARP](https://github.com/apple/ml-sharp) code |
 | `thirdparty/depth_pro_2/` | Unmodified copy of Apple's [Depth Pro 2](https://github.com/apple-aiml-research/ml-depth-pro-2) code |
 | `engine/` | Unmodified snapshot of [nunif](https://github.com/nagadomi/nunif) (iw3), see `engine/ENGINE_VERSION.txt` |
 | `installer/` | PowerShell installer, model pre-download helper, launcher source |
@@ -329,7 +355,7 @@ None of this would exist without it. Thank you!
 - Made with **Claude Opus 5.5**
 - Moments preview idea: **[u/pagineinternet](https://www.reddit.com/user/pagineinternet/)** — thank you!
 - 3D engine: **iw3 / nunif** by [nagadomi](https://github.com/nagadomi/nunif) (MIT License)
-- Depth models by their respective authors (Lotus and Lotus-2 by EnVision-Research, Apple Depth Pro 2, Depth
+- Depth models by their respective authors (Lotus and Lotus-2 by EnVision-Research, Apple SHARP, Apple Depth Pro 2, Depth
   Anything, Video Depth Anything, Distill Any Depth, Depth Pro, ZoeDepth) — see
   [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 

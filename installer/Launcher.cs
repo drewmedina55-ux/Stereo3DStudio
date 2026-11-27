@@ -11,8 +11,8 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyProduct("Stereo3DStudio")]
 [assembly: System.Reflection.AssemblyCompany("Drew Medina - drewmedina.com")]
 [assembly: System.Reflection.AssemblyDescription("2D to 3D image and video converter")]
-[assembly: System.Reflection.AssemblyVersion("1.2.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.2.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.3.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.3.0.0")]
 
 static class Launcher
 {

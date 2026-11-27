@@ -1,0 +1,9 @@
+Apple SHARP - unmodified copy of src/sharp from
+https://github.com/apple/ml-sharp
+commit aed6527499ef91cba3b54c18d49a870f25947190
+
+Code: Apple sample code license (sharp_licenses/LICENSE).
+Model weights are NOT included; the user downloads them from Apple after accepting the
+Apple Machine Learning Research Model License (sharp_licenses/LICENSE_MODEL) - research use only.
+The gsplat renderer module (sharp/utils/gsplat.py) is not used: Stereo3D Studio renders with its own
+PyTorch rasterizer (app/stereo3dstudio/sharp3d.py), so no CUDA compiler is needed.

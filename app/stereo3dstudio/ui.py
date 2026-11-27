@@ -1722,6 +1722,7 @@ class MainWindow(QMainWindow):
                                    "How the second eye is built from depth. Inpaint methods fill revealed gaps.")
         for label, v in S.METHODS.items():
             self.cb_method.addItem(label, v)
+        self.cb_method.currentIndexChanged.connect(lambda *_: self._method_changed())
         self.cb_synth = self._row(g, "Synthesize", QComboBox(),
                                   "Both = artifacts split between eyes. Left/Right = one eye stays original.")
         for label, v in (("Both eyes", "both"), ("Right eye only", "right"), ("Left eye only", "left")):
@@ -1982,6 +1983,7 @@ class MainWindow(QMainWindow):
         self._set_combo_data(self.cb_model, s["depth_model"])
         self._set_combo_data(self.cb_res, s["resolution"])
         self._set_combo_data(self.cb_method, s["method"])
+        self._method_changed()
         self.sl_div.setValue(s["divergence"])
         self.sl_conv.setValue(s["convergence"])
         self.sl_fg.setValue(s["foreground_scale"])
@@ -2120,8 +2122,34 @@ class MainWindow(QMainWindow):
         ModelManagerDialog(self, focus or self.cb_model.currentData()).exec()
         self._fill_models()
 
+    def _method_changed(self):
+        """SHARP builds its own 3D scene, so the depth model menu doesn't apply to it."""
+        sharp = self.cb_method.currentData() == "sharp"
+        self.cb_model.setEnabled(not sharp)
+        self.cb_model.setToolTip("Not used by SHARP — it predicts its own 3D scene from the picture." if sharp else "")
+        self.cb_method.setToolTip(
+            "SHARP (Apple): turns each picture into a 3D scene of Gaussian splats and films it with two virtual "
+            "cameras — real geometry instead of shifted pixels. Images only; uses 3D strength and Screen plane. "
+            "Needs a one-time 2.7 GB download (Models window)." if sharp else "")
+
     def _ensure_model(self, s):
         """Make sure the selected depth model is available; offer the model manager if not."""
+        if s.get("method") == "sharp":
+            from . import sharp3d as _SH
+            if not _SH.is_ready():
+                r = QMessageBox.question(
+                    self, APP_NAME,
+                    "The SHARP 3D scene method needs Apple's SHARP model, downloaded once (2.7 GB, Apple research-"
+                    "use-only license).\n\nOpen the model manager now?")
+                if r == QMessageBox.Yes:
+                    self.open_models("SHARP_3D")
+                if not _SH.is_ready():
+                    return False
+            if any(it["type"] == "Video" for it in self.items) and \
+                    QMessageBox.question(self, APP_NAME, "SHARP works on images for now — videos in the queue will be "
+                                         "skipped. Continue?") != QMessageBox.Yes:
+                return False
+            return True
         m = s["depth_model"]
         if m == "Lotus2_D":
             from . import lotus2 as _L2
