@@ -72,3 +72,14 @@ jobs:
           gh release create "v$v" "out/Stereo3DStudio_v$v`_Setup.exe" "out/Stereo3DStudio_v$v`_Setup.zip" --title "Stereo3D Studio $v" --notes-file $notes --target $env:GITHUB_SHA --latest
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Refresh release notes
+        if: steps.ver.outputs.exists == 'true'
+        shell: pwsh
+        run: |
+          # an existing release keeps its files; only its text is updated from release-notes/v<version>.md
+          $v = "${{ steps.ver.outputs.version }}"
+          $notes = "release-notes/v$v.md"
+          if (Test-Path $notes) { gh release edit "v$v" --notes-file $notes }
+        env:
+          GH_TOKEN: ${{ github.token }}
