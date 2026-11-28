@@ -87,8 +87,8 @@ METHODS = {
 }
 
 SHARP_RENDER = {                                # SHARP render size for videos
-    "Fast — 720p (quick tests)": 720,
-    "Balanced — 1080p (recommended)": 1080,
+    "Fast — 720p (recommended)": 720,
+    "Balanced — 1080p (sharper, about 2× slower)": 1080,
     "Full — processing size (slowest)": 0,
 }
 
@@ -99,7 +99,7 @@ PIX_FMTS = ["yuv420p", "yuv444p", "yuv420p10le", "rgb24"]
 
 # Tuned for a 16 GB NVIDIA card + Samsung Odyssey 3D.
 # Best quality that still runs at full GPU speed without running out of VRAM.
-SETTINGS_VERSION = 6
+SETTINGS_VERSION = 7
 
 DEFAULTS = {
     "layout": "Half SBS (Odyssey 3D / 3D TVs)",
@@ -139,7 +139,7 @@ DEFAULTS = {
     "batch_size": 4,
     "low_vram": False,
     "fp16": True,
-    "sharp_render": 1080,           # SHARP on video: render the eyes at most this tall (0 = processing size)
+    "sharp_render": 720,            # SHARP on video: render the eyes at most this tall (0 = processing size)
     "max_workers": 0,
     "cuda_stream": False,
     # job
@@ -182,7 +182,7 @@ BUILTIN_PRESETS = {
                          "edge_dilation": 1, "tta": True},
     "Anaglyph glasses": {"layout": "Anaglyph (red/cyan glasses)", "edge_dilation": 1},
     "Experimental · SHARP 3D scene (Odyssey)": {"method": "sharp", "layout": "Half SBS (Odyssey 3D / 3D TVs)",
-                                                "sharp_render": 1080, "max_height": 1080, "keep_source_fps": False,
+                                                "sharp_render": 720, "max_height": 1080, "keep_source_fps": False,
                                                 "max_fps": 30.0, "fp16": True, "ema_normalize": True,
                                                 "video_codec": "hevc_nvenc", "enc_preset": "p4"},
 }
@@ -232,6 +232,8 @@ def load_last():
         data["max_height"] = 1080   # 4K sources were far too slow at full size
     if ver < 5:
         data["divergence"], data["convergence"] = 2.2, 0.45   # new 3D strength / screen plane defaults
+    if ver < 7:
+        data["sharp_render"] = 720   # v1.4.1: SHARP renders at 720p by default (a usable speed)
     return _merged(data)
 
 

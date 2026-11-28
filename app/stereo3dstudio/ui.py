@@ -1725,8 +1725,8 @@ class MainWindow(QMainWindow):
         self.cb_method.currentIndexChanged.connect(lambda *_: self._method_changed())
         self.cb_sharp = self._row(g, "SHARP render", QComboBox(),
                                   "SHARP only, videos: how big the two eyes are rendered before the frame is scaled "
-                                  "to your Processing size. Rendering is SHARP's slow part — 720p is about twice as "
-                                  "fast as 1080p. SHARP's own detail is about 768 pixels, so 1080p loses very little.")
+                                  "to your Processing size. Rendering is SHARP's slow part — 720p (the default) is "
+                                  "about twice as fast as 1080p; 1080p is a little sharper.")
         for label, v in S.SHARP_RENDER.items():
             self.cb_sharp.addItem(label, v)
         self.cb_synth = self._row(g, "Synthesize", QComboBox(),
@@ -1989,7 +1989,7 @@ class MainWindow(QMainWindow):
         self._set_combo_data(self.cb_model, s["depth_model"])
         self._set_combo_data(self.cb_res, s["resolution"])
         self._set_combo_data(self.cb_method, s["method"])
-        self._set_combo_data(self.cb_sharp, s.get("sharp_render", 1080))
+        self._set_combo_data(self.cb_sharp, s.get("sharp_render", 720))
         self._method_changed()
         self.sl_div.setValue(s["divergence"])
         self.sl_conv.setValue(s["convergence"])

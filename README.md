@@ -226,15 +226,14 @@ Thanks to **[ComfyUI-SHARP-VR-Video](https://github.com/jerg-git/ComfyUI-SHARP-V
 - **Images and videos.** Pictures, folders and videos. Works with every layout except VR180 — including the 16:9 side
   bars, **Save images as** (left + right, colour + depth) and **Depth map only** — plus **Preview frame**,
   **Conversion preview** and **Moments preview**. Videos are converted **frame by frame** (every
-  frame becomes its own 3D scene) with sound, Processing size, codec, title and the live view as usual — and the
+  frame becomes its own 3D scene) with the **original audio kept**, Processing size, codec, title and the live view as usual — and the
   scene's depth range is smoothed between frames (**Smooth depth between frames**) to keep the 3D steady.
-- **Video takes time:** every frame is a full SHARP prediction plus two renders, so expect seconds per frame.
-  Use the preset **★ Experimental · SHARP 3D scene (Odyssey)** (Half SBS, 1080p, 30 fps, FP16, GPU encoder) and
-  keep **SHARP render** at **Balanced — 1080p**; **Fast — 720p** is about twice as fast for quick tests. Try
-  **Conversion preview** on a clip first. Some flicker can remain, since SHARP looks at each frame on its own.
+- **Video takes time:** every frame is a full SHARP prediction plus two renders. Use the preset
+  **★ Experimental · SHARP 3D scene (Odyssey)** (Half SBS, 1080p output, SHARP render 720p, 30 fps, FP16, GPU
+  encoder) for a usable speed, and try **Conversion preview** on a clip first. Some flicker can remain, since SHARP looks at each frame on its own.
 - **SHARP render** (under Method, videos): how big the eyes are rendered before the frame is scaled to your
-  Processing size — **Fast — 720p**, **Balanced — 1080p** (recommended; SHARP's own detail is about 768 pixels, so it
-  loses very little) or **Full — processing size**. Each eye is rendered straight at its final size (half width for
+  Processing size — **Fast — 720p** (the default: a usable speed, and SHARP's own detail is about 768 pixels),
+  **Balanced — 1080p** (a little sharper, about twice as slow) or **Full — processing size**. Each eye is rendered straight at its final size (half width for
   Half SBS), and depth layouts skip the eyes entirely.
 - **No compiling:** SHARP's own renderer needs gsplat, which has to compile CUDA code on your PC. Stereo3D Studio
   renders the splats with its own PyTorch renderer instead, so it just works. It draws each frame in strips, so its

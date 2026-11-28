@@ -719,7 +719,7 @@ class Converter:
             self.on_log(f"Title skipped: {e}")
         pad16 = getattr(args, "pad_mode", None) == "16:9"
         smooth = {}
-        cap = int(settings.get("sharp_render", 1080) or 0)
+        cap = int(settings.get("sharp_render", 720) or 0)
         dest = path.join(output_dir, _make_output_filename(path.basename(input_path), args, video=True))
 
         def config_callback(metadata):

@@ -6,6 +6,8 @@
   to take their shapes apart (a float64 SVD), and the renderer then put the same shapes back together. Stereo3D Studio
   now keeps the splat shapes on the GPU and skips that step entirely — identical results. (Thanks to jerg-git's
   ComfyUI-SHARP-VR-Video v0.2.0 for pointing at this step.)
+- **SHARP render now defaults to Fast — 720p** (also in the Experimental · SHARP preset): about twice as fast as
+  1080p, at a usable speed. Balanced — 1080p is still there for a little extra sharpness.
 - cuDNN picks the fastest kernels for SHARP's fixed 1536×1536 input.
 
 ## 1.4
