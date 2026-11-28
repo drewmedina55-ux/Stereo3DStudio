@@ -8,6 +8,8 @@
   ComfyUI-SHARP-VR-Video v0.2.0 for pointing at this step.)
 - **SHARP render now defaults to Fast — 720p** (also in the Experimental · SHARP preset): about twice as fast as
   1080p, at a usable speed. Balanced — 1080p is still there for a little extra sharpness.
+- The method is now listed as **SHARP 3D scene (experimental · Apple · jerg-git)**, crediting jerg-git's
+  ComfyUI-SHARP-VR-Video.
 - cuDNN picks the fastest kernels for SHARP's fixed 1536×1536 input.
 
 ## 1.4

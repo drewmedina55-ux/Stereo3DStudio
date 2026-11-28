@@ -79,7 +79,7 @@ METHODS = {
     "MLBW L2 (less stretching)": "mlbw_l2",
     "MLBW L4": "mlbw_l4",
     "MLBW L2 + inpaint (fills gaps)": "mlbw_l2_inpaint",
-    "SHARP 3D scene (experimental · Apple)": "sharp",
+    "SHARP 3D scene (experimental · Apple · jerg-git)": "sharp",
     "Forward + fill": "forward_fill",
     "Forward + inpaint": "forward_inpaint",
     "Backward": "backward",
