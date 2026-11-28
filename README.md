@@ -17,6 +17,9 @@ Stereo3D Studio is a desktop app built on [iw3](https://github.com/nagadomi/nuni
 2D-to-stereo engine. It estimates depth with modern AI depth models, builds a second eye for every frame, and encodes
 the result as side-by-side (SBS) 3D video — with a queue, presets, live preview and a one-click Windows installer.
 
+**New in 1.4.1 — faster SHARP:** several seconds saved on every frame (the splat shapes now stay on the graphics
+card), and SHARP renders at 720p by default for a usable video speed.
+
 **New in 1.4 — a standard Windows setup wizard and experimental SHARP 3D for images and video.** Install with a
 normal Next → Next → Install wizard (no admin rights, uninstall from Windows Settings, your models are always kept on
 updates), and try Apple's **SHARP**, which turns every picture or video frame into a real 3D scene and films it with
