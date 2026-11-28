@@ -47,7 +47,7 @@ A collection of clips converted to 3D with Stereo3D Studio.<br>
 - **🆕 Setup wizard** — a standard Windows installer: no admin rights, Start-menu entry, uninstall from Windows
   Settings → Apps, and updates that always keep your downloaded models. See [Install](#install).
 - **🧪 SHARP 3D scene (experimental) — images and video** — Apple's SHARP turns each picture or video frame into a
-  real 3D scene and films it with two virtual cameras, with its own **★ Experimental · SHARP 3D scene (Odyssey)**
+  real 3D scene and films it with two virtual cameras, with its own **★ Experimental · SHARP 3D scene image (Odyssey)**
   preset. See [SHARP](#-sharp-3d-scene-experimental).
 - **🆕 Depth map creator** — new **Depth map only** layout and two-file image saving (left + right, or colour + depth).
   See [Depth maps & image files](#-depth-maps--image-files).
@@ -229,7 +229,7 @@ Thanks to **[ComfyUI-SHARP-VR-Video](https://github.com/jerg-git/ComfyUI-SHARP-V
   frame becomes its own 3D scene) with the **original audio kept**, Processing size, codec, title and the live view as usual — and the
   scene's depth range is smoothed between frames (**Smooth depth between frames**) to keep the 3D steady.
 - **Video takes time:** every frame is a full SHARP prediction plus two renders. Use the preset
-  **★ Experimental · SHARP 3D scene (Odyssey)** (Half SBS, 1080p output, SHARP render 720p, 30 fps, FP16, GPU
+  **★ Experimental · SHARP 3D scene image (Odyssey)** (Half SBS, 1080p output, SHARP render 720p, 30 fps, FP16, GPU
   encoder) for a usable speed, and try **Conversion preview** on a clip first. Some flicker can remain, since SHARP looks at each frame on its own.
 - **SHARP render** (under Method, videos): how big the eyes are rendered before the frame is scaled to your
   Processing size — **Fast — 720p** (the default: a usable speed, and SHARP's own detail is about 768 pixels),

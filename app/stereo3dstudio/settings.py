@@ -181,7 +181,7 @@ BUILTIN_PRESETS = {
     "Photos · Pop-out": {"foreground_scale": 1.0,
                          "edge_dilation": 1, "tta": True},
     "Anaglyph glasses": {"layout": "Anaglyph (red/cyan glasses)", "edge_dilation": 1},
-    "Experimental · SHARP 3D scene (Odyssey)": {"method": "sharp", "layout": "Half SBS (Odyssey 3D / 3D TVs)",
+    "Experimental · SHARP 3D scene image (Odyssey)": {"method": "sharp", "layout": "Half SBS (Odyssey 3D / 3D TVs)",
                                                 "sharp_render": 720, "max_height": 1080, "keep_source_fps": False,
                                                 "max_fps": 30.0, "fp16": True, "ema_normalize": True,
                                                 "video_codec": "hevc_nvenc", "enc_preset": "p4"},

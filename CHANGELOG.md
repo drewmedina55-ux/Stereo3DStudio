@@ -10,6 +10,7 @@
   1080p, at a usable speed. Balanced — 1080p is still there for a little extra sharpness.
 - The method is now listed as **SHARP 3D scene (experimental · Apple · jerg-git)**, crediting jerg-git's
   ComfyUI-SHARP-VR-Video.
+- The SHARP preset is renamed **Experimental · SHARP 3D scene image (Odyssey)**.
 - cuDNN picks the fastest kernels for SHARP's fixed 1536×1536 input.
 
 ## 1.4
